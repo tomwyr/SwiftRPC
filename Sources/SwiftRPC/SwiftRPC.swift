@@ -1,0 +1,77 @@
+import Foundation
+
+@attached(peer, names: suffixed(Client), suffixed(Server))
+public macro RPC() = #externalMacro(module: "SwiftRPCMacros", type: "RPCMacro")
+
+/// The envelope sent from client → server for every RPC call.
+public struct RPCRequest<Input: Codable>: Codable {
+    public let input: Input
+
+    public init(input: Input) {
+        self.input = input
+    }
+}
+
+/// The envelope returned from server → client.
+public enum RPCResponse<Output: Codable>: Codable {
+    case success(Output)
+    case failure(RPCError)
+
+    enum CodingKeys: String, CodingKey {
+        case ok, error
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let output = try container.decodeIfPresent(Output.self, forKey: .ok) {
+            self = .success(output)
+        } else {
+            let error = try container.decode(RPCError.self, forKey: .error)
+            self = .failure(error)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .success(let output):
+            try container.encode(output, forKey: .ok)
+        case .failure(let error):
+            try container.encode(error, forKey: .error)
+        }
+    }
+}
+
+/// A serialisable RPC error propagated across the wire.
+public struct RPCError: Error, Codable, Sendable {
+    public let code: RPCErrorCode
+    public let message: String
+
+    public init(code: RPCErrorCode, message: String) {
+        self.code = code
+        self.message = message
+    }
+}
+
+public enum RPCErrorCode: String, Codable, Sendable {
+    case notFound = "NOT_FOUND"
+    case badRequest = "BAD_REQUEST"
+    case unauthorized = "UNAUTHORIZED"
+    case internalError = "INTERNAL_ERROR"
+    case notImplemented = "NOT_IMPLEMENTED"
+}
+
+extension RPCError: LocalizedError {
+    public var errorDescription: String? {
+        "[\(code.rawValue)] \(message)"
+    }
+}
+
+/// Implemented by the generated client. Not used directly.
+public protocol RPCTransport: Sendable {
+    func send<Input: Codable, Output: Codable>(
+        route: String,
+        input: Input,
+        outputType: Output.Type
+    ) async throws -> Output
+}
