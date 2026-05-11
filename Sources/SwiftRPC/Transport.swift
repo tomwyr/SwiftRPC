@@ -50,7 +50,6 @@ public final class HTTPTransport: RPCTransport, Sendable {
     case .success(let output):
       return output
     case .failure(let error):
-      // TODO Verify throwing is the correct thing to do
       throw error
     }
   }
