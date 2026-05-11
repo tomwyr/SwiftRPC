@@ -13,7 +13,7 @@ let package = Package(
         // .library(name: "SwiftRPCHummingbird", targets: ["SwiftRPCHummingbird"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "509.0.0"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "603.0.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
     ],
     targets: [
@@ -24,13 +24,11 @@ let package = Package(
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
-            ]
+            ],
         ),
         .target(
             name: "SwiftRPC",
-            dependencies: [
-                "SwiftRPCMacros"
-            ]
+            dependencies: ["SwiftRPCMacros"]
         ),
         .executableTarget(
             name: "SwiftRPCHummingbird",
@@ -38,14 +36,14 @@ let package = Package(
                 "SwiftRPC",
                 "SwiftRPCMacros",
                 .product(name: "Hummingbird", package: "hummingbird"),
-            ]
+            ],
         ),
         .testTarget(
             name: "SwiftRPCMacroTests",
             dependencies: [
                 "SwiftRPCMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
-            ]
+            ],
         ),
     ]
 )

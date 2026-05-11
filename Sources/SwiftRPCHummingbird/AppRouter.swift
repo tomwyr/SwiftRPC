@@ -37,7 +37,7 @@ public struct Post: Codable, Sendable {
 // Request body:      { "input": { ...parameters... } }
 // Response body:     { "ok": <value> }  |  { "error": { "code": "...", "message": "..." } }
 
-@RPC
+// @RPC
 public protocol AppRouter {
   func getUser(id: UUID) async throws -> User
   func listUsers() async throws -> [User]

@@ -37,7 +37,7 @@ struct RPCMethod {
 
         guard let effect = fn.signature.effectSpecifiers,
             effect.asyncSpecifier != nil,
-            effect.throwsSpecifier != nil
+            effect.throwsClause?.throwsSpecifier != nil
         else {
             throw RPCMacroError.methodMustBeAsyncThrows(name: fn.name.text)
         }
@@ -101,8 +101,8 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
         methodDecls.append(methodBody)
     }
 
-    let allInputStructs = inputStructDecls.joined(separator: "\n\n")
-    let allMethods = methodDecls.joined(separator: "\n\n")
+    let allInputStructs = inputStructDecls.map { $0.indented() }.joined(separator: "\n\n")
+    let allMethods = methodDecls.map { $0.indented() }.joined(separator: "\n\n")
 
     let source = """
         public struct \(clientName): Sendable {
@@ -171,7 +171,7 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
         routeRegistrations.append(registration)
     }
 
-    let allInputStructs = inputStructDecls.joined(separator: "\n\n")
+    let allInputStructs = inputStructDecls.map { $0.indented() }.joined(separator: "\n\n")
     let allRoutes = routeRegistrations.joined(separator: "\n\n")
 
     let source = """
@@ -192,7 +192,6 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
 
         \(allInputStructs)
 
-            /// Register all RPC routes onto a Hummingbird Router.
             public func register<Context: RequestContext>(on router: some RouterMethods<Context>) {
         \(allRoutes)
             }
@@ -216,5 +215,12 @@ enum RPCMacroError: Error, CustomStringConvertible {
         case .methodMustReturnValue(let name):
             "@RPC: '\(name)' must have a return type"
         }
+    }
+}
+
+extension String {
+    fileprivate func indented(width: Int = 4) -> String {
+        let spaces = String(repeating: " ", count: width)
+        return split(separator: "\n").map { spaces + $0 }.joined(separator: "\n")
     }
 }
