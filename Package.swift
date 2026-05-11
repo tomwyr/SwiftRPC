@@ -31,7 +31,7 @@ let package = Package(
             dependencies: ["SwiftRPCMacros"]
         ),
         .executableTarget(
-            name: "SwiftRPCHummingbird",
+            name: "SwiftRPCExamples",
             dependencies: [
                 "SwiftRPC",
                 "SwiftRPCMacros",
@@ -39,7 +39,7 @@ let package = Package(
             ],
         ),
         .testTarget(
-            name: "SwiftRPCMacroTests",
+            name: "SwiftRPCMacrosTests",
             dependencies: [
                 "SwiftRPCMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
