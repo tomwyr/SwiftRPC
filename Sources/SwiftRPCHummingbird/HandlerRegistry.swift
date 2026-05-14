@@ -13,15 +13,14 @@ public struct HummingbirdHandlerRegistry<Context: RequestContext>:
     self.router = router
   }
 
-  @preconcurrency
   public func register<Input: Codable & Sendable, Output: Codable & Sendable>(
     method: String,
-    handler: @escaping @Sendable (Input) async throws -> Output
+    handler: @escaping @Sendable (Input) async throws -> Output,
   ) {
     router.post("/\(method)") { request, context -> Response in
       let envelope = try await request.decode(
         as: RPCRequest<Input>.self,
-        context: context
+        context: context,
       )
       let input = envelope.input
       do {

@@ -7,7 +7,7 @@ extension Response {
   static func json<T: Codable>(
     _ value: RPCResponse<T>,
     encoder: JSONEncoder,
-    status: HTTPResponse.Status = .ok
+    status: HTTPResponse.Status = .ok,
   ) throws -> Response {
     let data = try encoder.encode(value)
     var headers = HTTPFields()
