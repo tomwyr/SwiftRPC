@@ -159,7 +159,7 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
   let allMethods = methodRegistrations.map { $0.indented() }.joined(separator: "\n\n")
 
   let source = """
-    public struct \(serverName)<Handler: \(protoName)>: Sendable {
+    public struct \(serverName)<Handler: \(protoName) & Sendable>: Sendable {
         private let handler: Handler
 
         public init(handler: Handler) {
