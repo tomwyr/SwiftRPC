@@ -1,5 +1,6 @@
 import Foundation
 import Hummingbird
+import SwiftRPCHummingbird
 
 let command = CommandLine.arguments.dropFirst().first
 
@@ -25,7 +26,9 @@ func runClient() async throws {
 func runServer() async throws {
   let router = Router()
   let server = EchoRouterServer(handler: EchoRouterServerHandler())
-  server.register(on: router)
+
+  let registry = HummingbirdHandlerRegistry(router: router)
+  server.register(on: registry)
 
   let app = Application(router: router)
   print("Running server")

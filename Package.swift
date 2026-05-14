@@ -10,7 +10,7 @@ let package = Package(
     ],
     products: [
         .library(name: "SwiftRPC", targets: ["SwiftRPC"]),
-        // .library(name: "SwiftRPCHummingbird", targets: ["SwiftRPCHummingbird"]),
+        .library(name: "SwiftRPCHummingbird", targets: ["SwiftRPCHummingbird"]),
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "603.0.0"),
@@ -28,13 +28,21 @@ let package = Package(
         ),
         .target(
             name: "SwiftRPC",
-            dependencies: ["SwiftRPCMacros"]
+            dependencies: ["SwiftRPCMacros"],
+        ),
+        .target(
+            name: "SwiftRPCHummingbird",
+            dependencies: [
+                "SwiftRPC",
+                .product(name: "Hummingbird", package: "hummingbird"),
+            ],
         ),
         .executableTarget(
             name: "SwiftRPCExamples",
             dependencies: [
                 "SwiftRPC",
                 "SwiftRPCMacros",
+                "SwiftRPCHummingbird",
                 .product(name: "Hummingbird", package: "hummingbird"),
             ],
         ),

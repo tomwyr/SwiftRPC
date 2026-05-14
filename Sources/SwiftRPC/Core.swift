@@ -72,3 +72,12 @@ public protocol RPCTransport: Sendable {
     outputType: Output.Type
   ) async throws -> Output
 }
+
+/// Registering RPC handlers with a transport. 
+/// Each transport provides its own implementation of the protocol.
+public protocol RPCHandlerRegistry: Sendable {
+  func register<Input: Codable, Output: Codable>(
+    method: String,
+    handler: @escaping @Sendable (Input) async throws -> Output
+  )
+}

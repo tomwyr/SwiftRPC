@@ -129,7 +129,7 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
   let serverName = "\(protoName)Server"
 
   var inputStructDecls = [String]()
-  var routeRegistrations = [String]()
+  var methodRegistrations = [String]()
 
   for method in methods {
     let fields = method
@@ -148,52 +148,28 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
       .joined(separator: ", ")
 
     let registration = """
-      router.post("\(method.route)") { request, context -> Response in
-          let envelope = try await request.decode(
-              as: RPCRequest<\(method.inputTypeName)>.self,
-              using: decoder
-          )
-          let input = envelope.input
-          do {
-              let result = try await self.handler.\(method.name)(\(callArgs))
-              let response = RPCResponse<\(method.returnType)>.success(result)
-              return try Response.json(response, encoder: encoder)
-          } catch let rpcError as RPCError {
-              let response = RPCResponse<\(method.returnType)>.failure(rpcError)
-              return try Response.json(response, encoder: encoder, status: .internalServerError)
-          } catch {
-              let rpcError = RPCError(code: .internalError, message: error.localizedDescription)
-              let response = RPCResponse<\(method.returnType)>.failure(rpcError)
-              return try Response.json(response, encoder: encoder, status: .internalServerError)
-          }
+      registry.register(method: "\(method.name)") { (input: \(method.inputTypeName)) in
+          try await self.handler.\(method.name)(\(callArgs))
       }
       """
-    routeRegistrations.append(registration)
+    methodRegistrations.append(registration)
   }
 
   let allInputStructs = inputStructDecls.map { $0.indented() }.joined(separator: "\n\n")
-  let allRoutes = routeRegistrations.joined(separator: "\n\n")
+  let allMethods = methodRegistrations.map { $0.indented() }.joined(separator: "\n\n")
 
   let source = """
     public struct \(serverName)<Handler: \(protoName)>: Sendable {
         private let handler: Handler
-        private let encoder: JSONEncoder
-        private let decoder: JSONDecoder
 
-        public init(
-            handler: Handler,
-            encoder: JSONEncoder = JSONEncoder(),
-            decoder: JSONDecoder = JSONDecoder()
-        ) {
+        public init(handler: Handler) {
             self.handler = handler
-            self.encoder = encoder
-            self.decoder = decoder
         }
 
     \(allInputStructs)
 
-        public func register<Context: RequestContext>(on router: some RouterMethods<Context>) {
-    \(allRoutes)
+        public func register(on registry: any RPCHandlerRegistry) {
+    \(allMethods)
         }
     }
     """

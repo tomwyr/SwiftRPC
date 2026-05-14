@@ -46,41 +46,18 @@ let macros = ["RPC": RPCMacro.self]
 
         public struct EchoRouterServer<Handler: EchoRouter>: Sendable {
           private let handler: Handler
-          private let encoder: JSONEncoder
-          private let decoder: JSONDecoder
 
-          public init(
-            handler: Handler,
-            encoder: JSONEncoder = JSONEncoder(),
-            decoder: JSONDecoder = JSONDecoder()
-          ) {
+          public init(handler: Handler) {
             self.handler = handler
-            self.encoder = encoder
-            self.decoder = decoder
           }
 
           private struct _PingInput: Codable {
             let message: String
           }
 
-          public func register<Context: RequestContext>(on router: some RouterMethods<Context>) {
-            router.post("/ping") { request, context -> Response in
-            let envelope = try await request.decode(
-                as: RPCRequest<_PingInput>.self,
-                using: decoder
-            )
-            let input = envelope.input
-            do {
-                let result = try await self.handler.ping(message: input.message)
-                let response = RPCResponse<String>.success(result)
-                return try Response.json(response, encoder: encoder)
-            } catch let rpcError as RPCError {
-                let response = RPCResponse<String>.failure(rpcError)
-                return try Response.json(response, encoder: encoder, status: .internalServerError)
-            } catch {
-                let rpcError = RPCError(code: .internalError, message: error.localizedDescription)
-                let response = RPCResponse<String>.failure(rpcError)
-                return try Response.json(response, encoder: encoder, status: .internalServerError)
+          public func register(on registry: any RPCHandlerRegistry) {
+            registry.register(method: "ping") { input in
+                try await self.handler.ping(message: input.message)
             }
           }
         }
@@ -132,17 +109,9 @@ let macros = ["RPC": RPCMacro.self]
 
       public struct PostRouterServer<Handler: PostRouter>: Sendable {
         private let handler: Handler
-        private let encoder: JSONEncoder
-        private let decoder: JSONDecoder
 
-        public init(
-          handler: Handler,
-          encoder: JSONEncoder = JSONEncoder(),
-          decoder: JSONDecoder = JSONDecoder()
-        ) {
+        public init(handler: Handler) {
           self.handler = handler
-          self.encoder = encoder
-          self.decoder = decoder
         }
 
         private struct _CreatePostInput: Codable {
@@ -151,25 +120,9 @@ let macros = ["RPC": RPCMacro.self]
           let authorId: UUID
         }
 
-        public func register<Context: RequestContext>(on router: some RouterMethods<Context>) {
-          router.post("/createPost") { request, context -> Response in
-            let envelope = try await request.decode(
-              as: RPCRequest<_CreatePostInput>.self,
-              using: decoder
-            )
-            let input = envelope.input
-            do {
-              let result = try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
-              let response = RPCResponse<Post>.success(result)
-              return try Response.json(response, encoder: encoder)
-            } catch let rpcError as RPCError {
-              let response = RPCResponse<Post>.failure(rpcError)
-              return try Response.json(response, encoder: encoder, status: .internalServerError)
-            } catch {
-              let rpcError = RPCError(code: .internalError, message: error.localizedDescription)
-              let response = RPCResponse<Post>.failure(rpcError)
-              return try Response.json(response, encoder: encoder, status: .internalServerError)
-            }
+        public func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "createPost") { input in
+            try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
           }
         }
       }
@@ -202,53 +155,30 @@ let macros = ["RPC": RPCMacro.self]
           self.transport = HTTPTransport(baseURL: baseURL)
         }
 
-        private struct _PingInput: Codable {
-          public func ping() async throws -> String {
-              let input = _PingInput()
-              return try await transport.send(
-                  route: "/ping",
-                  input: input,
-                  outputType: String.self
-              )
-          }
+        private struct _PingInput: Codable {}
+
+        public func ping() async throws -> String {
+            let input = _PingInput()
+            return try await transport.send(
+                route: "/ping",
+                input: input,
+                outputType: String.self
+            )
+        }
       }
 
       public struct HealthRouterServer<Handler: HealthRouter>: Sendable {
         private let handler: Handler
-        private let encoder: JSONEncoder
-        private let decoder: JSONDecoder
 
-        public init(
-            handler: Handler,
-            encoder: JSONEncoder = JSONEncoder(),
-            decoder: JSONDecoder = JSONDecoder()
-        ) {
+        public init(handler: Handler) {
             self.handler = handler
-            self.encoder = encoder
-            self.decoder = decoder
         }
 
         private struct _PingInput: Codable {}
 
-        public func register<Context: RequestContext>(on router: some RouterMethods<Context>) {
-          router.post("/ping") { request, context -> Response in
-            let envelope = try await request.decode(
-              as: RPCRequest<_PingInput>.self,
-              using: decoder
-            )
-            let input = envelope.input
-            do {
-              let result = try await self.handler.ping()
-              let response = RPCResponse<String>.success(result)
-              return try Response.json(response, encoder: encoder)
-            } catch let rpcError as RPCError {
-              let response = RPCResponse<String>.failure(rpcError)
-              return try Response.json(response, encoder: encoder, status: .internalServerError)
-            } catch {
-              let rpcError = RPCError(code: .internalError, message: error.localizedDescription)
-              let response = RPCResponse<String>.failure(rpcError)
-              return try Response.json(response, encoder: encoder, status: .internalServerError)
-            }
+        public func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { input in
+            try await self.handler.ping()
           }
         }
       }
