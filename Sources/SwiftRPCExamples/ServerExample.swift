@@ -5,12 +5,10 @@ import SwiftRPCHummingbird
 
 struct ServerApp {
   static func run() async throws {
-    let handler = AppRouterHandler()
-
     let router = Router()
 
-    let registry = HummingbirdHandlerRegistry(router: router)
-    AppRouterServer(handler: handler).register(on: registry)
+    let server = AppRouterServer(handler: AppRouterHandler())
+    server.register(on: router)
 
     let app = Application(
       router: router,

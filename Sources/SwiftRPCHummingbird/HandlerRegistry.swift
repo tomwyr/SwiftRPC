@@ -4,16 +4,16 @@ import SwiftRPC
 
 /// Hummingbird implementation of RPCHandlerRegistry.
 /// Handles HTTP-specific details like request parsing and response formatting.
-public struct HummingbirdHandlerRegistry<Context: RequestContext>:
+struct HummingbirdHandlerRegistry<Context: RequestContext>:
   RPCHandlerRegistry, @unchecked Sendable
 {
   let router: any RouterMethods<Context>
 
-  public init(router: any RouterMethods<Context>) {
+  init(router: any RouterMethods<Context>) {
     self.router = router
   }
 
-  public func register<Input: Codable & Sendable, Output: Codable & Sendable>(
+  func register<Input: Codable & Sendable, Output: Codable & Sendable>(
     method: String,
     handler: @escaping @Sendable (Input) async throws -> Output,
   ) {
@@ -36,5 +36,13 @@ public struct HummingbirdHandlerRegistry<Context: RequestContext>:
         return try context.responseEncoder.encode(response, from: request, context: context)
       }
     }
+  }
+}
+
+/// Namespace for convenient registration with Hummingbird routers.
+extension RPCServer {
+  /// Register this server directly on a Hummingbird router
+  public func register<Context: RequestContext>(on router: any RouterMethods<Context>) {
+    self.register(on: HummingbirdHandlerRegistry(router: router))
   }
 }

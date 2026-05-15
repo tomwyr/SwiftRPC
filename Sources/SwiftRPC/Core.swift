@@ -81,3 +81,9 @@ public protocol RPCHandlerRegistry: Sendable {
     handler: @escaping @Sendable (Input) async throws -> Output
   )
 }
+
+/// Core protocol for generated RPC servers.
+/// Transport packages can extend this protocol to provide convenience registration methods.
+public protocol RPCServer: Sendable {
+  func register(on registry: any RPCHandlerRegistry)
+}

@@ -89,7 +89,7 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
       .joined(separator: ", ")
 
     let methodBody = """
-      public func \(method.name)(\(paramList)) async throws -> \(method.returnType) {
+      func \(method.name)(\(paramList)) async throws -> \(method.returnType) {
           let input = \(method.inputTypeName)(\(inputInit))
           return try await transport.send(
               route: "\(method.route)",
@@ -105,14 +105,14 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
   let allMethods = methodDecls.map { $0.indented() }.joined(separator: "\n\n")
 
   let source = """
-    public struct \(clientName): Sendable {
+    struct \(clientName): Sendable {
         private let transport: any RPCTransport
 
-        public init(transport: any RPCTransport) {
+        init(transport: any RPCTransport) {
             self.transport = transport
         }
 
-        public init(baseURL: URL) {
+        init(baseURL: URL) {
             self.transport = HTTPTransport(baseURL: baseURL)
         }
 
@@ -159,16 +159,16 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
   let allMethods = methodRegistrations.map { $0.indented() }.joined(separator: "\n\n")
 
   let source = """
-    public struct \(serverName)<Handler: \(protoName) & Sendable>: Sendable {
+    struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
         private let handler: Handler
 
-        public init(handler: Handler) {
+        init(handler: Handler) {
             self.handler = handler
         }
 
     \(allInputStructs)
 
-        public func register(on registry: any RPCHandlerRegistry) {
+        func register(on registry: any RPCHandlerRegistry) {
     \(allMethods)
         }
     }
