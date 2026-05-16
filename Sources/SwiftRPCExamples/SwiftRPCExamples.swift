@@ -6,7 +6,7 @@ struct SwiftRPCExamples {
     let arguments = CommandLine.arguments
 
     guard arguments.count > 1 else {
-      print("Usage: SwiftRPCExamples <client|server>")
+      print("Usage: SwiftRPCExamples <client|server|in-memory>")
       exit(1)
     }
 
@@ -17,8 +17,10 @@ struct SwiftRPCExamples {
       try await ClientApp.run()
     case "server":
       try await ServerApp.run()
+    case "in-memory":
+      try await InMemoryApp.run()
     default:
-      print("Usage: SwiftRPCExamples <client|server>")
+      print("Usage: SwiftRPCExamples <client|server|in-memory>")
       exit(1)
     }
   }

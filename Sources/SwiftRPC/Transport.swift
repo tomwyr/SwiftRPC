@@ -54,3 +54,34 @@ public final class HTTPTransport: RPCTransport, Sendable {
     }
   }
 }
+
+/// In-memory transport for running both client and server in the same process.
+public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @unchecked Sendable {
+  private var handlers: [String: (Codable) async throws -> Codable] = [:]
+
+  public init() {}
+
+  public func register<Input: Codable & Sendable, Output: Codable & Sendable>(
+    method: String,
+    handler: @escaping @Sendable (Input) async throws -> Output
+  ) {
+    handlers[method] = { input in
+      try await handler(input as! Input)
+    }
+  }
+
+  public func send<Input: Codable, Output: Codable>(
+    route: String,
+    input: Input,
+    outputType: Output.Type,
+  ) async throws -> Output {
+    // Remove leading "/" from route to match registered method name.
+    let method = String(route.dropFirst())
+
+    guard let handler = handlers[method] else {
+      throw RPCError(code: .notImplemented, message: "Method not found: \(method)")
+    }
+
+    return try await handler(input) as! Output
+  }
+}
