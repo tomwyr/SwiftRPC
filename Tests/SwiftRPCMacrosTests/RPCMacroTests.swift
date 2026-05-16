@@ -1,230 +1,232 @@
-import SwiftSyntaxMacros
-import SwiftSyntaxMacrosTestSupport
+import MacroTesting
 import Testing
 
 @testable import SwiftRPCMacros
 
-let macros = ["RPC": RPCMacro.self]
-
-@Test func singleMethodExpansion() {
-  assertMacroExpansion(
-    """
-    @RPC
-    protocol EchoRouter {
-      func ping(message: String) async throws -> String
-    }
-    """,
-    expandedSource: """
+@Suite(.macros(["RPC": RPCMacro.self]))
+struct RPCMacroTests {
+  @Test func singleMethodExpansion() {
+    assertMacro {
+      """
+      @RPC
+      protocol EchoRouter {
+        func ping(message: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
       protocol EchoRouter {
         func ping(message: String) async throws -> String
       }
 
-      public struct EchoRouterClient: Sendable {
-        private let transport: any RPCTransport
+      struct EchoRouterClient: Sendable {
+          private let transport: any RPCTransport
 
-        public init(transport: any RPCTransport) {
-          self.transport = transport
-        }
-
-        public init(baseURL: URL) {
-          self.transport = HTTPTransport(baseURL: baseURL)
-        }
-
-        private struct _PingInput: Codable {
-          let message: String
-        }
-
-        public func ping(message: String) async throws -> String {
-            let input = _PingInput(message: message)
-            return try await transport.send(
-            route: "/ping",
-            input: input,
-            outputType: String.self
-            )
+          init(transport: any RPCTransport) {
+              self.transport = transport
           }
-        }
 
-        public struct EchoRouterServer<Handler: EchoRouter>: Sendable {
-          private let handler: Handler
-
-          public init(handler: Handler) {
-            self.handler = handler
+          init(baseURL: URL) {
+              self.transport = HTTPTransport(baseURL: baseURL)
           }
 
           private struct _PingInput: Codable {
-            let message: String
+              let message: String
           }
 
-          public func register(on registry: any RPCHandlerRegistry) {
-            registry.register(method: "ping") { input in
-                try await self.handler.ping(message: input.message)
-            }
+          func ping(message: String) async throws -> String {
+              let input = _PingInput(message: message)
+              return try await transport.send(
+                  route: "/ping",
+                  input: input,
+                  outputType: String.self
+              )
           }
-        }
       }
-      """,
-    macros: macros,
-  )
-}
 
-@Test func multipleParametersWrappedIntoInputStruct() {
-  assertMacroExpansion(
-    """
-    @RPC
-    protocol PostRouter {
-      func createPost(title: String, body: String, authorId: UUID) async throws -> Post
+      struct EchoRouterServer<Handler: EchoRouter & Sendable>: RPCServer {
+          private let handler: Handler
+
+          init(handler: Handler) {
+              self.handler = handler
+          }
+
+          private struct _PingInput: Codable {
+              let message: String
+          }
+
+          func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: _PingInput) in
+              try await self.handler.ping(message: input.message)
+          }
+          }
+      }
+      """
     }
-    """,
-    expandedSource: """
+  }
+
+  @Test func multipleParametersWrappedIntoInputStruct() {
+    assertMacro {
+      """
+      @RPC
+      protocol PostRouter {
+        func createPost(title: String, body: String, authorId: UUID) async throws -> Post
+      }
+      """
+    } expansion: {
+      """
       protocol PostRouter {
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post
       }
 
-      public struct PostRouterClient: Sendable {
-        private let transport: any RPCTransport
+      struct PostRouterClient: Sendable {
+          private let transport: any RPCTransport
 
-        public init(transport: any RPCTransport) {
-          self.transport = transport
-        }
-
-        public init(baseURL: URL) {
-          self.transport = HTTPTransport(baseURL: baseURL)
-        }
-
-        private struct _CreatePostInput: Codable {
-          let title: String
-          let body: String
-          let authorId: UUID
-        }
-
-        public func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
-          let input = _CreatePostInput(title: title, body: body, authorId: authorId)
-          return try await transport.send(
-            route: "/createPost",
-            input: input,
-            outputType: Post.self
-          )
-        }
-      }
-
-      public struct PostRouterServer<Handler: PostRouter>: Sendable {
-        private let handler: Handler
-
-        public init(handler: Handler) {
-          self.handler = handler
-        }
-
-        private struct _CreatePostInput: Codable {
-          let title: String
-          let body: String
-          let authorId: UUID
-        }
-
-        public func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "createPost") { input in
-            try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
+          init(transport: any RPCTransport) {
+              self.transport = transport
           }
-        }
-      }
-      """,
-    macros: macros,
-  )
-}
 
-@Test func noParameterMethod() {
-  assertMacroExpansion(
-    """
-    @RPC
-    protocol HealthRouter {
-      func ping() async throws -> String
+          init(baseURL: URL) {
+              self.transport = HTTPTransport(baseURL: baseURL)
+          }
+
+          private struct _CreatePostInput: Codable {
+              let title: String
+              let body: String
+              let authorId: UUID
+          }
+
+          func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
+              let input = _CreatePostInput(title: title, body: body, authorId: authorId)
+              return try await transport.send(
+                  route: "/createPost",
+                  input: input,
+                  outputType: Post.self
+              )
+          }
+      }
+
+      struct PostRouterServer<Handler: PostRouter & Sendable>: RPCServer {
+          private let handler: Handler
+
+          init(handler: Handler) {
+              self.handler = handler
+          }
+
+          private struct _CreatePostInput: Codable {
+              let title: String
+              let body: String
+              let authorId: UUID
+          }
+
+          func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "createPost") { (input: _CreatePostInput) in
+              try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
+          }
+          }
+      }
+      """
     }
-    """,
-    expandedSource: """
+  }
+
+  @Test func noParameterMethod() {
+    assertMacro {
+      """
+      @RPC
+      protocol HealthRouter {
+        func ping() async throws -> String
+      }
+      """
+    } expansion: {
+      """
       protocol HealthRouter {
         func ping() async throws -> String
       }
 
-      public struct HealthRouterClient: Sendable {
-        private let transport: any RPCTransport
+      struct HealthRouterClient: Sendable {
+          private let transport: any RPCTransport
 
-        public init(transport: any RPCTransport) {
-          self.transport = transport
-        }
-
-        public init(baseURL: URL) {
-          self.transport = HTTPTransport(baseURL: baseURL)
-        }
-
-        private struct _PingInput: Codable {}
-
-        public func ping() async throws -> String {
-            let input = _PingInput()
-            return try await transport.send(
-                route: "/ping",
-                input: input,
-                outputType: String.self
-            )
-        }
-      }
-
-      public struct HealthRouterServer<Handler: HealthRouter>: Sendable {
-        private let handler: Handler
-
-        public init(handler: Handler) {
-            self.handler = handler
-        }
-
-        private struct _PingInput: Codable {}
-
-        public func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { input in
-            try await self.handler.ping()
+          init(transport: any RPCTransport) {
+              self.transport = transport
           }
-        }
+
+          init(baseURL: URL) {
+              self.transport = HTTPTransport(baseURL: baseURL)
+          }
+
+          private struct _PingInput: Codable {
+          }
+
+          func ping() async throws -> String {
+              let input = _PingInput()
+              return try await transport.send(
+                  route: "/ping",
+                  input: input,
+                  outputType: String.self
+              )
+          }
       }
-      """,
-    macros: macros,
-  )
-}
 
-@Test func diagnosticOnNonProtocol() {
-  assertMacroExpansion(
-    """
-    @RPC
-    struct NotAProtocol {}
-    """,
-    expandedSource: """
-      struct NotAProtocol {}
-      """,
-    diagnostics: [
-      DiagnosticSpec(
-        message: "@RPC can only be applied to a protocol",
-        line: 1, column: 1,
-      )
-    ],
-    macros: macros,
-  )
-}
+      struct HealthRouterServer<Handler: HealthRouter & Sendable>: RPCServer {
+          private let handler: Handler
 
-@Test func diagnosticOnNonAsyncThrowsMethod() {
-  assertMacroExpansion(
-    """
-    @RPC
-    protocol BadRouter {
-      func sync(id: String) -> String
+          init(handler: Handler) {
+              self.handler = handler
+          }
+
+          private struct _PingInput: Codable {
+          }
+
+          func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: _PingInput) in
+              try await self.handler.ping()
+          }
+          }
+      }
+      """
     }
-    """,
-    expandedSource: """
+  }
+
+  @Test func diagnosticOnNonProtocol() {
+    assertMacro {
+      """
+      @RPC
+      struct NotAProtocol {}
+      """
+    } diagnostics: {
+      """
+      @RPC
+      ┬───
+      ╰─ 🛑 @RPC can only be applied to a protocol
+      struct NotAProtocol {}
+      """
+    } expansion: {
+      """
+
+      """
+    }
+  }
+
+  @Test func diagnosticOnNonAsyncThrowsMethod() {
+    assertMacro {
+      """
+      @RPC
       protocol BadRouter {
         func sync(id: String) -> String
       }
-      """,
-    diagnostics: [
-      DiagnosticSpec(
-        message: "@RPC: 'sync' must be declared 'async throws'",
-        line: 1, column: 1,
-      )
-    ],
-    macros: macros,
-  )
+      """
+    } diagnostics: {
+      """
+      @RPC
+      ┬───
+      ╰─ 🛑 @RPC: 'sync' must be declared 'async throws'
+      protocol BadRouter {
+        func sync(id: String) -> String
+      }
+      """
+    } expansion: {
+      """
+      """
+    }
+  }
 }
