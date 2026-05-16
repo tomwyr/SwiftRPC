@@ -50,10 +50,7 @@ struct RPCMethod {
       return (label: label, name: name, type: type)
     }
 
-    guard let fnReturnType = fn.signature.returnClause?.type.trimmedDescription else {
-      throw RPCMacroError.methodMustReturnValue(name: fn.name.text)
-    }
-    returnType = fnReturnType
+    returnType = fn.signature.returnClause?.type.trimmedDescription ?? "Void"
   }
 
   /// The internal input struct name, e.g. `GetUser`
@@ -188,7 +185,6 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
 enum RPCMacroError: Error, CustomStringConvertible {
   case notAProtocol
   case methodMustBeAsyncThrows(name: String)
-  case methodMustReturnValue(name: String)
 
   var description: String {
     switch self {
@@ -196,8 +192,6 @@ enum RPCMacroError: Error, CustomStringConvertible {
       "@RPC can only be applied to a protocol"
     case .methodMustBeAsyncThrows(let name):
       "@RPC: '\(name)' must be declared 'async throws'"
-    case .methodMustReturnValue(let name):
-      "@RPC: '\(name)' must have a return type"
     }
   }
 }

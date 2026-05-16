@@ -222,4 +222,62 @@ struct RPCMacroTests {
       """
     }
   }
+
+  @Test func noReturnTypeDefaultsToVoid() {
+    assertMacro {
+      """
+      @RPC
+      protocol CommandRouter {
+        func execute(command: String) async throws
+      }
+      """
+    } expansion: {
+      """
+      protocol CommandRouter {
+        func execute(command: String) async throws
+      }
+
+      private struct CommandRouterInputs {
+        struct Execute: Codable {
+          let command: String
+        }
+      }
+
+      struct CommandRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func execute(command: String) async throws -> Void {
+          let input = CommandRouterInputs.Execute(command: command)
+          return try await transport.send(
+            route: "/execute",
+            input: input,
+            outputType: Void.self
+          )
+        }
+      }
+
+      struct CommandRouterServer<Handler: CommandRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "execute") { (input: CommandRouterInputs.Execute) in
+            try await self.handler.execute(command: input.command)
+          }
+        }
+      }
+      """
+    }
+  }
 }
