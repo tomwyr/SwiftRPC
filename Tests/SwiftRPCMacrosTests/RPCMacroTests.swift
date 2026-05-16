@@ -19,6 +19,12 @@ struct RPCMacroTests {
         func ping(message: String) async throws -> String
       }
 
+      private struct EchoRouterInputs {
+          struct Ping: Codable {
+              let message: String
+          }
+      }
+
       struct EchoRouterClient: Sendable {
           private let transport: any RPCTransport
 
@@ -30,12 +36,8 @@ struct RPCMacroTests {
               self.transport = HTTPTransport(baseURL: baseURL)
           }
 
-          private struct _PingInput: Codable {
-              let message: String
-          }
-
           func ping(message: String) async throws -> String {
-              let input = _PingInput(message: message)
+              let input = EchoRouterInputs.Ping(message: message)
               return try await transport.send(
                   route: "/ping",
                   input: input,
@@ -51,14 +53,10 @@ struct RPCMacroTests {
               self.handler = handler
           }
 
-          private struct _PingInput: Codable {
-              let message: String
-          }
-
           func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { (input: _PingInput) in
-              try await self.handler.ping(message: input.message)
-          }
+              registry.register(method: "ping") { (input: EchoRouterInputs.Ping) in
+                  try await self.handler.ping(message: input.message)
+              }
           }
       }
       """
@@ -79,6 +77,14 @@ struct RPCMacroTests {
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post
       }
 
+      private struct PostRouterInputs {
+          struct CreatePost: Codable {
+              let title: String
+              let body: String
+              let authorId: UUID
+          }
+      }
+
       struct PostRouterClient: Sendable {
           private let transport: any RPCTransport
 
@@ -90,14 +96,8 @@ struct RPCMacroTests {
               self.transport = HTTPTransport(baseURL: baseURL)
           }
 
-          private struct _CreatePostInput: Codable {
-              let title: String
-              let body: String
-              let authorId: UUID
-          }
-
           func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
-              let input = _CreatePostInput(title: title, body: body, authorId: authorId)
+              let input = PostRouterInputs.CreatePost(title: title, body: body, authorId: authorId)
               return try await transport.send(
                   route: "/createPost",
                   input: input,
@@ -113,16 +113,10 @@ struct RPCMacroTests {
               self.handler = handler
           }
 
-          private struct _CreatePostInput: Codable {
-              let title: String
-              let body: String
-              let authorId: UUID
-          }
-
           func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "createPost") { (input: _CreatePostInput) in
-              try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
-          }
+              registry.register(method: "createPost") { (input: PostRouterInputs.CreatePost) in
+                  try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
+              }
           }
       }
       """
@@ -143,6 +137,11 @@ struct RPCMacroTests {
         func ping() async throws -> String
       }
 
+      private struct HealthRouterInputs {
+          struct Ping: Codable {
+          }
+      }
+
       struct HealthRouterClient: Sendable {
           private let transport: any RPCTransport
 
@@ -154,11 +153,8 @@ struct RPCMacroTests {
               self.transport = HTTPTransport(baseURL: baseURL)
           }
 
-          private struct _PingInput: Codable {
-          }
-
           func ping() async throws -> String {
-              let input = _PingInput()
+              let input = HealthRouterInputs.Ping()
               return try await transport.send(
                   route: "/ping",
                   input: input,
@@ -174,13 +170,10 @@ struct RPCMacroTests {
               self.handler = handler
           }
 
-          private struct _PingInput: Codable {
-          }
-
           func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { (input: _PingInput) in
-              try await self.handler.ping()
-          }
+              registry.register(method: "ping") { (input: HealthRouterInputs.Ping) in
+                  try await self.handler.ping()
+              }
           }
       }
       """

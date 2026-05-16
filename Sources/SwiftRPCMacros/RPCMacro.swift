@@ -20,10 +20,11 @@ public struct RPCMacro: PeerMacro {
 
     let protoName = proto.name.text
 
+    let inputsDecl = try makeInputTypes(protoName: protoName, methods: methods)
     let clientDecl = try makeClient(protoName: protoName, methods: methods)
     let serverDecl = try makeServer(protoName: protoName, methods: methods)
 
-    return [clientDecl, serverDecl]
+    return [inputsDecl, clientDecl, serverDecl]
   }
 }
 
@@ -55,31 +56,55 @@ struct RPCMethod {
     returnType = fnReturnType
   }
 
-  /// The internal input struct name, e.g. `_GetUserInput`
+  /// The internal input struct name, e.g. `GetUser`
   var inputTypeName: String {
-    "_\(name.prefix(1).uppercased())\(name.dropFirst())Input"
+    "\(name.prefix(1).uppercased())\(name.dropFirst())"
   }
 
   /// The route path, e.g. `/getUser`
   var route: String { "/\(name)" }
 }
 
+private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
+  let structName = "\(protoName)Inputs"
+
+  var memberDecls = [String]()
+
+  for method in methods {
+    if method.params.isEmpty {
+      memberDecls.append("    struct \(method.inputTypeName): Codable {}")
+    } else {
+      let fields = method.params
+        .map { "    let \($0.name): \($0.type)" }
+        .joined(separator: "\n")
+
+      memberDecls.append(
+        """
+        struct \(method.inputTypeName): Codable {
+        \(fields)
+        }
+        """.indented(width: 4))
+    }
+  }
+
+  let allInputStructs = memberDecls.joined(separator: "\n\n")
+
+  let source = """
+    private struct \(structName) {
+    \(allInputStructs)
+    }
+    """
+
+  return DeclSyntax(stringLiteral: source)
+}
+
 private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
   let clientName = "\(protoName)Client"
 
   var methodDecls = [String]()
-  var inputStructDecls = [String]()
 
   for method in methods {
-    let fields = method.params
-      .map { "    let \($0.name): \($0.type)" }
-      .joined(separator: "\n")
-    let inputStruct = """
-      private struct \(method.inputTypeName): Codable {
-      \(fields)
-      }
-      """
-    inputStructDecls.append(inputStruct)
+    let inputTypeName = "\(protoName)Inputs.\(method.inputTypeName)"
 
     let paramList = method.params
       .map { "\($0.label): \($0.type)" }
@@ -90,7 +115,7 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
 
     let methodBody = """
       func \(method.name)(\(paramList)) async throws -> \(method.returnType) {
-          let input = \(method.inputTypeName)(\(inputInit))
+          let input = \(inputTypeName)(\(inputInit))
           return try await transport.send(
               route: "\(method.route)",
               input: input,
@@ -101,7 +126,6 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
     methodDecls.append(methodBody)
   }
 
-  let allInputStructs = inputStructDecls.map { $0.indented() }.joined(separator: "\n\n")
   let allMethods = methodDecls.map { $0.indented() }.joined(separator: "\n\n")
 
   let source = """
@@ -116,8 +140,6 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
             self.transport = HTTPTransport(baseURL: baseURL)
         }
 
-    \(allInputStructs)
-
     \(allMethods)
     }
     """
@@ -128,35 +150,23 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
 private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
   let serverName = "\(protoName)Server"
 
-  var inputStructDecls = [String]()
   var methodRegistrations = [String]()
 
   for method in methods {
-    let fields = method
-      .params.map { "    let \($0.name): \($0.type)" }
-      .joined(separator: "\n")
-    let inputStruct = """
-      private struct \(method.inputTypeName): Codable {
-      \(fields)
-      }
-      """
-    inputStructDecls.append(inputStruct)
-
     // Argument forwarding: handler.getUser(id: input.id, ...)
     let callArgs = method.params
       .map { "\($0.label): input.\($0.name)" }
       .joined(separator: ", ")
 
     let registration = """
-      registry.register(method: "\(method.name)") { (input: \(method.inputTypeName)) in
+      registry.register(method: "\(method.name)") { (input: \(protoName)Inputs.\(method.inputTypeName)) in
           try await self.handler.\(method.name)(\(callArgs))
       }
       """
     methodRegistrations.append(registration)
   }
 
-  let allInputStructs = inputStructDecls.map { $0.indented() }.joined(separator: "\n\n")
-  let allMethods = methodRegistrations.map { $0.indented() }.joined(separator: "\n\n")
+  let allMethods = methodRegistrations.map { $0.indented(width: 8) }.joined(separator: "\n\n")
 
   let source = """
     struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
@@ -165,8 +175,6 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
         init(handler: Handler) {
             self.handler = handler
         }
-
-    \(allInputStructs)
 
         func register(on registry: any RPCHandlerRegistry) {
     \(allMethods)

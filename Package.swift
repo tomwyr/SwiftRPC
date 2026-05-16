@@ -18,7 +18,7 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-macro-testing", from: "0.6.5"),
         // https://github.com/pointfreeco/swift-snapshot-testing/issues/1085
         // Pinned to work around swift-macro-testing build issue:
-        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", exact: "1.18.9"), 
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", exact: "1.18.9"),
     ],
     targets: [
         .macro(
