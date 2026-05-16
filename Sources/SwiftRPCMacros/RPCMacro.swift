@@ -72,10 +72,10 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
 
   for method in methods {
     if method.params.isEmpty {
-      memberDecls.append("    struct \(method.inputTypeName): Codable {}")
+      memberDecls.append("  struct \(method.inputTypeName): Codable {}")
     } else {
       let fields = method.params
-        .map { "    let \($0.name): \($0.type)" }
+        .map { "  let \($0.name): \($0.type)" }
         .joined(separator: "\n")
 
       memberDecls.append(
@@ -83,7 +83,7 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
         struct \(method.inputTypeName): Codable {
         \(fields)
         }
-        """.indented(width: 4))
+        """.indented())
     }
   }
 
@@ -115,12 +115,12 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
 
     let methodBody = """
       func \(method.name)(\(paramList)) async throws -> \(method.returnType) {
-          let input = \(inputTypeName)(\(inputInit))
-          return try await transport.send(
-              route: "\(method.route)",
-              input: input,
-              outputType: \(method.returnType).self
-          )
+        let input = \(inputTypeName)(\(inputInit))
+        return try await transport.send(
+          route: "\(method.route)",
+          input: input,
+          outputType: \(method.returnType).self
+        )
       }
       """
     methodDecls.append(methodBody)
@@ -130,15 +130,15 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
 
   let source = """
     struct \(clientName): Sendable {
-        private let transport: any RPCTransport
+      private let transport: any RPCTransport
 
-        init(transport: any RPCTransport) {
-            self.transport = transport
-        }
+      init(transport: any RPCTransport) {
+        self.transport = transport
+      }
 
-        init(baseURL: URL) {
-            self.transport = HTTPTransport(baseURL: baseURL)
-        }
+      init(baseURL: URL) {
+        self.transport = HTTPTransport(baseURL: baseURL)
+      }
 
     \(allMethods)
     }
@@ -160,25 +160,25 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
 
     let registration = """
       registry.register(method: "\(method.name)") { (input: \(protoName)Inputs.\(method.inputTypeName)) in
-          try await self.handler.\(method.name)(\(callArgs))
+        try await self.handler.\(method.name)(\(callArgs))
       }
       """
     methodRegistrations.append(registration)
   }
 
-  let allMethods = methodRegistrations.map { $0.indented(width: 8) }.joined(separator: "\n\n")
+  let allMethods = methodRegistrations.map { $0.indented(width: 4) }.joined(separator: "\n\n")
 
   let source = """
     struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
-        private let handler: Handler
+      private let handler: Handler
 
-        init(handler: Handler) {
-            self.handler = handler
-        }
+      init(handler: Handler) {
+        self.handler = handler
+      }
 
-        func register(on registry: any RPCHandlerRegistry) {
+      func register(on registry: any RPCHandlerRegistry) {
     \(allMethods)
-        }
+      }
     }
     """
 
@@ -203,7 +203,7 @@ enum RPCMacroError: Error, CustomStringConvertible {
 }
 
 extension String {
-  fileprivate func indented(width: Int = 4) -> String {
+  fileprivate func indented(width: Int = 2) -> String {
     let spaces = String(repeating: " ", count: width)
     return split(separator: "\n").map { spaces + $0 }.joined(separator: "\n")
   }

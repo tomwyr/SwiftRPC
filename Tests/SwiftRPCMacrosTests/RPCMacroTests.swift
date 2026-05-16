@@ -20,44 +20,44 @@ struct RPCMacroTests {
       }
 
       private struct EchoRouterInputs {
-          struct Ping: Codable {
-              let message: String
-          }
+        struct Ping: Codable {
+          let message: String
+        }
       }
 
       struct EchoRouterClient: Sendable {
-          private let transport: any RPCTransport
+        private let transport: any RPCTransport
 
-          init(transport: any RPCTransport) {
-              self.transport = transport
-          }
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
 
-          init(baseURL: URL) {
-              self.transport = HTTPTransport(baseURL: baseURL)
-          }
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
 
-          func ping(message: String) async throws -> String {
-              let input = EchoRouterInputs.Ping(message: message)
-              return try await transport.send(
-                  route: "/ping",
-                  input: input,
-                  outputType: String.self
-              )
-          }
+        func ping(message: String) async throws -> String {
+          let input = EchoRouterInputs.Ping(message: message)
+          return try await transport.send(
+            route: "/ping",
+            input: input,
+            outputType: String.self
+          )
+        }
       }
 
       struct EchoRouterServer<Handler: EchoRouter & Sendable>: RPCServer {
-          private let handler: Handler
+        private let handler: Handler
 
-          init(handler: Handler) {
-              self.handler = handler
-          }
+        init(handler: Handler) {
+          self.handler = handler
+        }
 
-          func register(on registry: any RPCHandlerRegistry) {
-              registry.register(method: "ping") { (input: EchoRouterInputs.Ping) in
-                  try await self.handler.ping(message: input.message)
-              }
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: EchoRouterInputs.Ping) in
+            try await self.handler.ping(message: input.message)
           }
+        }
       }
       """
     }
@@ -78,46 +78,46 @@ struct RPCMacroTests {
       }
 
       private struct PostRouterInputs {
-          struct CreatePost: Codable {
-              let title: String
-              let body: String
-              let authorId: UUID
-          }
+        struct CreatePost: Codable {
+          let title: String
+          let body: String
+          let authorId: UUID
+        }
       }
 
       struct PostRouterClient: Sendable {
-          private let transport: any RPCTransport
+        private let transport: any RPCTransport
 
-          init(transport: any RPCTransport) {
-              self.transport = transport
-          }
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
 
-          init(baseURL: URL) {
-              self.transport = HTTPTransport(baseURL: baseURL)
-          }
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
 
-          func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
-              let input = PostRouterInputs.CreatePost(title: title, body: body, authorId: authorId)
-              return try await transport.send(
-                  route: "/createPost",
-                  input: input,
-                  outputType: Post.self
-              )
-          }
+        func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
+          let input = PostRouterInputs.CreatePost(title: title, body: body, authorId: authorId)
+          return try await transport.send(
+            route: "/createPost",
+            input: input,
+            outputType: Post.self
+          )
+        }
       }
 
       struct PostRouterServer<Handler: PostRouter & Sendable>: RPCServer {
-          private let handler: Handler
+        private let handler: Handler
 
-          init(handler: Handler) {
-              self.handler = handler
-          }
+        init(handler: Handler) {
+          self.handler = handler
+        }
 
-          func register(on registry: any RPCHandlerRegistry) {
-              registry.register(method: "createPost") { (input: PostRouterInputs.CreatePost) in
-                  try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
-              }
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "createPost") { (input: PostRouterInputs.CreatePost) in
+            try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
           }
+        }
       }
       """
     }
@@ -138,43 +138,43 @@ struct RPCMacroTests {
       }
 
       private struct HealthRouterInputs {
-          struct Ping: Codable {
-          }
+        struct Ping: Codable {
+        }
       }
 
       struct HealthRouterClient: Sendable {
-          private let transport: any RPCTransport
+        private let transport: any RPCTransport
 
-          init(transport: any RPCTransport) {
-              self.transport = transport
-          }
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
 
-          init(baseURL: URL) {
-              self.transport = HTTPTransport(baseURL: baseURL)
-          }
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
 
-          func ping() async throws -> String {
-              let input = HealthRouterInputs.Ping()
-              return try await transport.send(
-                  route: "/ping",
-                  input: input,
-                  outputType: String.self
-              )
-          }
+        func ping() async throws -> String {
+          let input = HealthRouterInputs.Ping()
+          return try await transport.send(
+            route: "/ping",
+            input: input,
+            outputType: String.self
+          )
+        }
       }
 
       struct HealthRouterServer<Handler: HealthRouter & Sendable>: RPCServer {
-          private let handler: Handler
+        private let handler: Handler
 
-          init(handler: Handler) {
-              self.handler = handler
-          }
+        init(handler: Handler) {
+          self.handler = handler
+        }
 
-          func register(on registry: any RPCHandlerRegistry) {
-              registry.register(method: "ping") { (input: HealthRouterInputs.Ping) in
-                  try await self.handler.ping()
-              }
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: HealthRouterInputs.Ping) in
+            try await self.handler.ping()
           }
+        }
       }
       """
     }
