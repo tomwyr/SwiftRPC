@@ -40,13 +40,17 @@ public enum RPCResponse<Output: Codable>: Codable {
 }
 
 /// A serialisable RPC error propagated across the wire.
-public struct RPCError: Error, Codable, Sendable {
+public struct RPCError: Error, LocalizedError, Codable, Sendable {
   public let code: RPCErrorCode
   public let message: String
 
   public init(code: RPCErrorCode, message: String) {
     self.code = code
     self.message = message
+  }
+
+  public var errorDescription: String? {
+    "[\(code.rawValue)] \(message)"
   }
 }
 
@@ -56,12 +60,6 @@ public enum RPCErrorCode: String, Codable, Sendable {
   case unauthorized = "UNAUTHORIZED"
   case internalError = "INTERNAL_ERROR"
   case notImplemented = "NOT_IMPLEMENTED"
-}
-
-extension RPCError: LocalizedError {
-  public var errorDescription: String? {
-    "[\(code.rawValue)] \(message)"
-  }
 }
 
 /// Implemented by the generated client. Not used directly.

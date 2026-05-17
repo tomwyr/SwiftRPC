@@ -4,123 +4,89 @@ import Testing
 @testable import SwiftRPC
 
 @Suite struct InMemoryTransportTests {
-  @Test func simpleParameterAndReturnType() async throws {
-    let handler = MockTestService()
+  @Test func simpleType() async throws {
+    nonisolated(unsafe) var receivedInput: String?
+
     let transport = InMemoryTransport()
+    transport.register(method: "greet") { (input: String) -> String in
+      receivedInput = input
+      return "world"
+    }
 
-    let server = TestServiceServer(handler: handler)
-    server.register(on: transport)
-    let client = TestServiceClient(transport: transport)
+    let result = try await transport.send(
+      route: "/greet", input: "hello", outputType: String.self,
+    )
 
-    let result = try await client.logIn(password: "test123")
-
-    #expect(result == .success)
-    #expect(handler.logInCalls == 1)
-    #expect(handler.logInParams == ["test123"])
+    #expect(receivedInput == "hello")
+    #expect(result == "world")
   }
 
-  @Test func noParameters() async throws {
-    let handler = MockTestService()
+  @Test func customType() async throws {
+    nonisolated(unsafe) var receivedInput: TestUser?
+
+    let input = TestUser(id: UUID(), name: "Alice")
+    let output = TestUser(id: UUID(), name: "Bob")
+
     let transport = InMemoryTransport()
+    transport.register(method: "process") { (input: TestUser) in
+      receivedInput = input
+      return output
+    }
 
-    let server = TestServiceServer(handler: handler)
-    server.register(on: transport)
-    let client = TestServiceClient(transport: transport)
+    let result = try await transport.send(
+      route: "/process", input: input, outputType: TestUser.self,
+    )
 
-    let result = try await client.logOut()
-
-    #expect(result == .success)
-    #expect(handler.logOutCalls == 1)
+    #expect(receivedInput == input)
+    #expect(result == output)
   }
 
-  @Test func structResult() async throws {
-    let handler = MockTestService()
-    handler.registerResults = [
-      TestUser(id: UUID(), name: "Alice"),
-      TestUser(id: UUID(), name: "Bob"),
-    ]
+  @Test func unregisteredMethod() async throws {
     let transport = InMemoryTransport()
-
-    let server = TestServiceServer(handler: handler)
-    server.register(on: transport)
-    let client = TestServiceClient(transport: transport)
-
-    let user1 = try await client.register()
-    let user2 = try await client.register()
-
-    #expect(user1.name == "Alice")
-    #expect(user2.name == "Bob")
-    #expect(handler.registerCalls == 2)
-  }
-
-  @Test func structParameter() async throws {
-    let handler = MockTestService()
-    let transport = InMemoryTransport()
-
-    let server = TestServiceServer(handler: handler)
-    server.register(on: transport)
-    let client = TestServiceClient(transport: transport)
-
-    let user = TestUser(id: UUID(), name: "TestUser")
-    let result = try await client.unregister(user: user)
-
-    #expect(result == .success)
-    #expect(handler.unregisterCalls == 1)
-  }
-
-  @Test func multipleSequentialCalls() async throws {
-    let handler = MockTestService()
-    let transport = InMemoryTransport()
-
-    let server = TestServiceServer(handler: handler)
-    server.register(on: transport)
-    let client = TestServiceClient(transport: transport)
-
-    let result1 = try await client.logIn(password: "password1")
-    let result2 = try await client.logIn(password: "password2")
-    let result3 = try await client.logOut()
-
-    #expect(result1 == .success)
-    #expect(result2 == .success)
-    #expect(result3 == .success)
-    #expect(handler.logInCalls == 2)
-    #expect(handler.logInParams == ["password1", "password2"])
-    #expect(handler.logOutCalls == 1)
-  }
-
-  @Test func methodNotFound() async throws {
-    let handler = MockTestService()
-    let transport = InMemoryTransport()
-
-    let server = TestServiceServer(handler: handler)
-    server.register(on: transport)
 
     await #expect(throws: RPCError.self) {
-      try await transport.send(route: "/nonExistent", input: "test", outputType: String.self)
+      try await transport.send(
+        route: "/nonexistent", input: "", outputType: String.self,
+      )
+    }
+  }
+
+  @Test func routeWithoutLeadingSlash() async throws {
+    let transport = InMemoryTransport()
+    transport.register(method: "test") { (_: String) -> String in
+      "success"
+    }
+
+    await #expect(throws: RPCError.self) {
+      try await transport.send(
+        route: "test", input: "", outputType: String.self,
+      )
     }
   }
 
   @Test func invalidInputType() async throws {
     let transport = InMemoryTransport()
-
-    transport.register(method: "testMethod") { (input: String) -> String in
-      return "test result"
+    transport.register(method: "process") { (input: String) -> String in
+      "success"
     }
 
     await #expect(throws: RPCError.self) {
-      try await transport.send(route: "/testMethod", input: 42, outputType: String.self)
+      try await transport.send(
+        route: "/process", input: 123, outputType: String.self,
+      )
     }
   }
 
   @Test func invalidOutputType() async throws {
     let transport = InMemoryTransport()
-
-    transport.register(method: "testMethod") { (input: String) -> String in
-      return "test result"
+    transport.register(method: "process") { (_: String) -> Int in
+      42
     }
 
     await #expect(throws: RPCError.self) {
-      try await transport.send(route: "/testMethod", input: "test", outputType: Int.self)
+      try await transport.send(
+        route: "/process", input: "input", outputType: String.self,
+      )
     }
   }
 }
