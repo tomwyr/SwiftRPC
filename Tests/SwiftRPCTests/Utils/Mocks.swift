@@ -2,23 +2,7 @@ import Foundation
 
 @testable import SwiftRPC
 
-@RPC
-protocol TestService {
-  func logIn(password: String) async throws -> TestActionResult
-  func logOut() async throws -> TestActionResult
-  func register() async throws -> TestUser
-  func unregister(user: TestUser) async throws -> TestActionResult
-
-}
-
-enum TestActionResult: Codable { case success }
-
-struct TestUser: Codable, Sendable {
-  let id: UUID
-  let name: String
-}
-
-class TestServiceMock: TestService, @unchecked Sendable {
+class MockTestService: TestService, @unchecked Sendable {
   var logInCalls = 0
   var logInParams = [String]()
   var logOutCalls = 0
@@ -45,5 +29,17 @@ class TestServiceMock: TestService, @unchecked Sendable {
   func unregister(user: TestUser) async throws -> TestActionResult {
     unregisterCalls += 1
     return .success
+  }
+}
+
+class MockTransportURLSession: TransportURLSession, @unchecked Sendable {
+  var responseHandler: ((URLRequest) throws -> (Data, URLResponse))
+
+  init(responseHandler: @escaping ((URLRequest) throws -> (Data, URLResponse))) {
+    self.responseHandler = responseHandler
+  }
+
+  func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    try responseHandler(request)
   }
 }

@@ -5,7 +5,7 @@ import Testing
 
 @Suite struct InMemoryTransportTests {
   @Test func simpleParameterAndReturnType() async throws {
-    let handler = TestServiceMock()
+    let handler = MockTestService()
     let transport = InMemoryTransport()
 
     let server = TestServiceServer(handler: handler)
@@ -20,7 +20,7 @@ import Testing
   }
 
   @Test func noParameters() async throws {
-    let handler = TestServiceMock()
+    let handler = MockTestService()
     let transport = InMemoryTransport()
 
     let server = TestServiceServer(handler: handler)
@@ -34,7 +34,7 @@ import Testing
   }
 
   @Test func structResult() async throws {
-    let handler = TestServiceMock()
+    let handler = MockTestService()
     handler.registerResults = [
       TestUser(id: UUID(), name: "Alice"),
       TestUser(id: UUID(), name: "Bob"),
@@ -54,7 +54,7 @@ import Testing
   }
 
   @Test func structParameter() async throws {
-    let handler = TestServiceMock()
+    let handler = MockTestService()
     let transport = InMemoryTransport()
 
     let server = TestServiceServer(handler: handler)
@@ -69,7 +69,7 @@ import Testing
   }
 
   @Test func multipleSequentialCalls() async throws {
-    let handler = TestServiceMock()
+    let handler = MockTestService()
     let transport = InMemoryTransport()
 
     let server = TestServiceServer(handler: handler)
@@ -89,7 +89,7 @@ import Testing
   }
 
   @Test func methodNotFound() async throws {
-    let handler = TestServiceMock()
+    let handler = MockTestService()
     let transport = InMemoryTransport()
 
     let server = TestServiceServer(handler: handler)

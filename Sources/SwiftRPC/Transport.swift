@@ -4,13 +4,13 @@ import Foundation
 /// POST /<route>  ->  { "input": ... }  ->  { "ok": ... } | { "error": ... }
 public final class HTTPTransport: RPCTransport, Sendable {
   private let baseURL: URL
-  private let session: URLSession
+  private let session: any TransportURLSession
   private let encoder: JSONEncoder
   private let decoder: JSONDecoder
 
   public init(
     baseURL: URL,
-    session: URLSession = .shared,
+    session: any TransportURLSession = URLSession.shared,
     encoder: JSONEncoder = JSONEncoder(),
     decoder: JSONDecoder = JSONDecoder(),
   ) {
@@ -55,6 +55,13 @@ public final class HTTPTransport: RPCTransport, Sendable {
   }
 }
 
+/// Protocol for URL session functionality used by transport.
+public protocol TransportURLSession: Sendable {
+  func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: TransportURLSession {}
+
 /// In-memory transport for running both client and server in the same process.
 public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @unchecked Sendable {
   private var handlers: [String: (Codable) async throws -> Codable] = [:]
@@ -67,7 +74,10 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
   ) {
     handlers[method] = { input in
       guard let typedInput = input as? Input else {
-        throw RPCError(code: .internalError, message: "Expected type \(Input.self) but got \(type(of: input)) for method \(method)")
+        throw RPCError(
+          code: .internalError,
+          message: "Expected type \(Input.self) but got \(type(of: input)) for method \(method)",
+        )
       }
       return try await handler(typedInput)
     }
@@ -87,7 +97,11 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
 
     let result = try await handler(input)
     guard let typedOutput = result as? Output else {
-      throw RPCError(code: .internalError, message: "Handler returned unexpected type \(type(of: result)), expected \(Output.self) for method \(method)")
+      throw RPCError(
+        code: .internalError,
+        message:
+          "Handler returned unexpected type \(type(of: result)), expected \(Output.self) for method \(method)",
+      )
     }
     return typedOutput
   }
