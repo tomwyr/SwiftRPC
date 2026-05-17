@@ -66,7 +66,10 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
     handler: @escaping @Sendable (Input) async throws -> Output
   ) {
     handlers[method] = { input in
-      try await handler(input as! Input)
+      guard let typedInput = input as? Input else {
+        throw RPCError(code: .internalError, message: "Expected type \(Input.self) but got \(type(of: input)) for method \(method)")
+      }
+      return try await handler(typedInput)
     }
   }
 
@@ -82,6 +85,10 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
       throw RPCError(code: .notImplemented, message: "Method not found: \(method)")
     }
 
-    return try await handler(input) as! Output
+    let result = try await handler(input)
+    guard let typedOutput = result as? Output else {
+      throw RPCError(code: .internalError, message: "Handler returned unexpected type \(type(of: result)), expected \(Output.self) for method \(method)")
+    }
+    return typedOutput
   }
 }

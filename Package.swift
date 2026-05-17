@@ -57,5 +57,9 @@ let package = Package(
                 .product(name: "MacroTesting", package: "swift-macro-testing"),
             ],
         ),
-    ]
+        .testTarget(
+            name: "SwiftRPCTests",
+            dependencies: ["SwiftRPC"],
+        ),
+    ],
 )
