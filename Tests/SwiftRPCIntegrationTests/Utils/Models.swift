@@ -3,20 +3,30 @@ import Foundation
 @testable import SwiftRPC
 
 @RPC
-protocol TestService {
-  func logIn(password: String) async throws -> TestActionResult
-  func logOut() async throws -> TestActionResult
-  func register() async throws -> TestUser
-  func unregister(user: TestUser) async throws -> TestActionResult
+protocol UserService {
+  func logIn(password: String) async throws -> UserActionResult
+  func logOut() async throws -> Int
+  func create() async throws -> UserProfile
+  func delete(user: UserProfile) async throws -> Bool
 }
 
-enum TestActionResult: Codable { case success }
+enum UserActionResult: Codable { case success }
 
-struct TestUser: Codable, Equatable {
-  let id: UUID
-  let name: String
+struct UserProfile: Codable, Equatable {
+  let userId: UUID
+  let fullName: String
+  let accountSettings: AccountSettings
+  let accountTypes: [AccountType]
 }
 
-struct TestGroup: Codable, Equatable {
-  let users: [TestUser]
+struct AccountSettings: Codable, Equatable {
+  let privateProfile: Bool
+  let maxFollowers: Int
+  let contentLanguage: String
+}
+
+enum AccountType: String, Codable, Equatable {
+  case standard
+  case premium
+  case enterprise
 }

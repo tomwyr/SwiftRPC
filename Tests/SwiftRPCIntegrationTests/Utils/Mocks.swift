@@ -1,34 +1,39 @@
 import Foundation
 
-class MockTestService: TestService, @unchecked Sendable {
+class MockUserService: UserService, @unchecked Sendable {
   var logInCalls = 0
   var logInParams = [String]()
   var logOutCalls = 0
-  var registerCalls = 0
-  var registerResults = [TestUser]()
-  var unregisterCalls = 0
+  var createCalls = 0
+  var createResults = [UserProfile]()
+  var deleteCalls = 0
 
-  func logIn(password: String) async throws -> TestActionResult {
+  func logIn(password: String) async throws -> UserActionResult {
     logInCalls += 1
     logInParams.append(password)
     return .success
   }
 
-  func logOut() async throws -> TestActionResult {
+  func logOut() async throws -> Int {
     logOutCalls += 1
-    return .success
+    return 1
   }
 
-  func register() async throws -> TestUser {
-    registerCalls += 1
-    guard !registerResults.isEmpty else {
-      return TestUser(id: UUID(), name: "DefaultUser")
+  func create() async throws -> UserProfile {
+    createCalls += 1
+    guard !createResults.isEmpty else {
+      return UserProfile(
+        userId: UUID(),
+        fullName: "DefaultUser",
+        accountSettings: AccountSettings(privateProfile: false, maxFollowers: 100, contentLanguage: "en"),
+        accountTypes: [.standard]
+      )
     }
-    return registerResults.removeFirst()
+    return createResults.removeFirst()
   }
 
-  func unregister(user: TestUser) async throws -> TestActionResult {
-    unregisterCalls += 1
-    return .success
+  func delete(user: UserProfile) async throws -> Bool {
+    deleteCalls += 1
+    return true
   }
 }

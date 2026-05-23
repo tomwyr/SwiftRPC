@@ -39,27 +39,27 @@ import Testing
   }
 
   @Test func structTypes() async throws {
-    registry.register(method: "process") { (input: TestInput) in
-      TestOutput(
-        result: "Processed user_\(input.id)",
-        timestamp: Int(Date().timeIntervalSince1970),
+    registry.register(method: "process") { (input: UpdateProfileInput) in
+      UpdateProfileResult(
+        success: true,
+        updatedAt: "2024-01-01"
       )
     }
 
     let app = Application(router: router)
 
     try await app.test(.router) { client in
-      let testInput = TestInput(id: UUID(), name: "Test User", value: 42)
+      let testInput = UpdateProfileInput(userId: UUID(), email: "test@example.com", age: 30)
       let body = try rpcEncode(testInput)
 
       try await client.executeRpc(uri: "/process", body: body) { response in
         #expect(response.status == .ok)
 
-        let responseBody = try rpcDecode(response.body, into: TestOutput.self)
+        let responseBody = try rpcDecode(response.body, into: UpdateProfileResult.self)
 
         switch responseBody {
         case .success(let output):
-          #expect(output.result.contains("Processed user_"))
+          #expect(output.success == true)
         case .failure:
           Issue.record("Expected success but got failure")
         }
@@ -68,14 +68,14 @@ import Testing
   }
 
   @Test func emptyInput() async throws {
-    registry.register(method: "noInput") { (input: EmptyInput) in
+    registry.register(method: "noInput") { (input: EmptyRequest) in
       "No input needed"
     }
 
     let app = Application(router: router)
 
     try await app.test(.router) { client in
-      let body = try rpcEncode(EmptyInput())
+      let body = try rpcEncode(EmptyRequest())
 
       try await client.executeRpc(uri: "/noInput", body: body) { response in
         #expect(response.status == .ok)
@@ -94,7 +94,7 @@ import Testing
 
   @Test func emptyOutput() async throws {
     registry.register(method: "execute") { (input: String) in
-      EmptyOutput()
+      EmptyResponse()
     }
 
     let app = Application(router: router)
@@ -105,7 +105,7 @@ import Testing
       try await client.executeRpc(uri: "/execute", body: body) { response in
         #expect(response.status == .ok)
 
-        let responseBody = try rpcDecode(response.body, into: EmptyOutput.self)
+        let responseBody = try rpcDecode(response.body, into: EmptyResponse.self)
 
         switch responseBody {
         case .success:
@@ -120,7 +120,7 @@ import Testing
 
   @Test func enumTypes() async throws {
     registry.register(method: "getEnum") { (input: String) in
-      TestEnum.optionA
+      AccountType.premium
     }
 
     let app = Application(router: router)
@@ -131,11 +131,11 @@ import Testing
       try await client.executeRpc(uri: "/getEnum", body: body) { response in
         #expect(response.status == .ok)
 
-        let responseBody = try rpcDecode(response.body, into: TestEnum.self)
+        let responseBody = try rpcDecode(response.body, into: AccountType.self)
 
         switch responseBody {
         case .success(let enumValue):
-          #expect(enumValue == .optionA)
+          #expect(enumValue == .premium)
         case .failure:
           Issue.record("Expected success but got failure")
         }
@@ -144,28 +144,29 @@ import Testing
   }
 
   @Test func nestedTypes() async throws {
-    registry.register(method: "nested") { (input: NestedStruct) in
+    registry.register(method: "nested") { (input: UserProfile) in
       input
     }
 
     let app = Application(router: router)
 
     try await app.test(.router) { client in
-      let input = NestedStruct(
-        id: UUID(),
-        title: "Test",
-        nested: InnerStruct(
-          innerValue: "Nested",
-          innerArray: [1, 2, 3],
+      let input = UserProfile(
+        userId: UUID(),
+        fullName: "Test User",
+        accountSettings: AccountSettings(
+          privateProfile: true,
+          maxFollowers: 1000,
+          contentLanguage: "en",
         ),
-        items: [.optionA, .optionB],
+        accountTypes: [.standard, .premium],
       )
       let body = try rpcEncode(input)
 
       try await client.executeRpc(uri: "/nested", body: body) { response in
         #expect(response.status == .ok)
 
-        let responseBody = try rpcDecode(response.body, into: NestedStruct.self)
+        let responseBody = try rpcDecode(response.body, into: UserProfile.self)
 
         switch responseBody {
         case .success(let output):
@@ -207,10 +208,10 @@ import Testing
 
   @Test func genericErrorConversion() async throws {
     registry.register(method: "genericFail") { (input: String) -> String in
-      throw TestError(message: "Generic error")
+      throw UserServiceError(message: "Generic error")
     }
     registry.register(method: "unexpectedFail") { (input: String) -> String in
-      throw TestUnknownError()
+      throw UnknownError()
     }
 
     let inputs = [
@@ -308,7 +309,7 @@ import Testing
   }
 
   @Test func incompleteBody() async throws {
-    registry.register(method: "test") { (input: TestInput) in
+    registry.register(method: "test") { (input: UpdateProfileInput) in
       "Result"
     }
 
@@ -316,7 +317,7 @@ import Testing
 
     try await app.test(.router) { client in
       // Send incomplete JSON missing required fields.
-      let incompleteJSON = #"{"input": {"id": "\#(UUID())"}}"#
+      let incompleteJSON = #"{"input": {"userId": "\#(UUID())"}}"#
 
       try await client.executeRpc(uri: "/test", body: incompleteJSON) { response in
         #expect(response.status == .badRequest)
@@ -347,7 +348,7 @@ import Testing
       "Method 2: \(input * 2)"
     }
 
-    registry.register(method: "method3") { (input: EmptyInput) in
+    registry.register(method: "method3") { (input: EmptyRequest) in
       true
     }
 
@@ -385,7 +386,7 @@ import Testing
       }
 
       // Test method3
-      let body3 = try rpcEncode(EmptyInput())
+      let body3 = try rpcEncode(EmptyRequest())
       try await client.executeRpc(uri: "/method3", body: body3) { response in
         #expect(response.status == .ok)
 

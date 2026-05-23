@@ -22,19 +22,29 @@ import Testing
   }
 
   @Test func customType() async throws {
-    nonisolated(unsafe) var receivedInput: TestUser?
+    nonisolated(unsafe) var receivedInput: UserProfile?
 
-    let input = TestUser(id: UUID(), name: "Alice")
-    let output = TestUser(id: UUID(), name: "Bob")
+    let input = UserProfile(
+      userId: UUID(),
+      fullName: "Alice",
+      accountSettings: AccountSettings(privateProfile: false, maxFollowers: 100, contentLanguage: "en"),
+      accountTypes: [.standard]
+    )
+    let output = UserProfile(
+      userId: UUID(),
+      fullName: "Bob",
+      accountSettings: AccountSettings(privateProfile: false, maxFollowers: 100, contentLanguage: "en"),
+      accountTypes: [.premium]
+    )
 
     let transport = InMemoryTransport()
-    transport.register(method: "process") { (input: TestUser) in
+    transport.register(method: "process") { (input: UserProfile) in
       receivedInput = input
       return output
     }
 
     let result = try await transport.send(
-      route: "/process", input: input, outputType: TestUser.self,
+      route: "/process", input: input, outputType: UserProfile.self,
     )
 
     #expect(receivedInput == input)

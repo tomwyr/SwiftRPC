@@ -2,11 +2,21 @@ import Foundation
 
 @testable import SwiftRPC
 
-struct TestUser: Codable, Equatable {
-  let id: UUID
-  let name: String
+struct UserProfile: Codable, Equatable {
+  let userId: UUID
+  let fullName: String
+  let accountSettings: AccountSettings
+  let accountTypes: [AccountType]
 }
 
-struct TestGroup: Codable, Equatable {
-  let users: [TestUser]
+struct AccountSettings: Codable, Equatable {
+  let privateProfile: Bool
+  let maxFollowers: Int
+  let contentLanguage: String
+}
+
+enum AccountType: String, Codable, Equatable {
+  case standard
+  case premium
+  case enterprise
 }

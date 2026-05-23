@@ -110,17 +110,27 @@ import Testing
   }
 
   @Test func payloadNestedTypes() async throws {
-    let sentInput = TestGroup(
-      users: [TestUser(id: UUID(), name: "Alice")]
-    )
-    let expectedOutput = TestGroup(
-      users: [TestUser(id: UUID(), name: "Bob")]
-    )
+    let sentInput = [
+      UserProfile(
+        userId: UUID(),
+        fullName: "Alice",
+        accountSettings: AccountSettings(privateProfile: false, maxFollowers: 100, contentLanguage: "en"),
+        accountTypes: [.standard]
+      )
+    ]
+    let expectedOutput = [
+      UserProfile(
+        userId: UUID(),
+        fullName: "Bob",
+        accountSettings: AccountSettings(privateProfile: false, maxFollowers: 100, contentLanguage: "en"),
+        accountTypes: [.premium]
+      )
+    ]
 
-    var receivedInput: RPCRequest<TestGroup>?
+    var receivedInput: RPCRequest<[UserProfile]>?
 
     let session = MockTransportURLSession { request in
-      receivedInput = try rpcDecode(request, into: TestGroup.self)
+      receivedInput = try rpcDecode(request, into: [UserProfile].self)
       let response = makeResponse(for: request, status: 200)
       let body = try rpcEncode(.success(expectedOutput))
       return (body, response)
@@ -131,7 +141,7 @@ import Testing
     )
 
     let result = try await transport.send(
-      route: "/test", input: sentInput, outputType: TestGroup.self,
+      route: "/test", input: sentInput, outputType: [UserProfile].self,
     )
 
     let rpcInput = try #require(receivedInput)

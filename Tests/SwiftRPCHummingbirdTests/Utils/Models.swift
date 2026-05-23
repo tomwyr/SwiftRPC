@@ -1,42 +1,43 @@
 import Foundation
 
-struct TestInput: Codable, Equatable {
-  let id: UUID
-  let name: String
-  let value: Int
+struct UserProfile: Codable, Equatable {
+  let userId: UUID
+  let fullName: String
+  let accountSettings: AccountSettings
+  let accountTypes: [AccountType]
 }
 
-struct TestOutput: Codable, Equatable {
-  let result: String
-  let timestamp: Int
+struct AccountSettings: Codable, Equatable {
+  let privateProfile: Bool
+  let maxFollowers: Int
+  let contentLanguage: String
 }
 
-struct EmptyInput: Codable, Equatable {}
-
-struct EmptyOutput: Codable, Equatable {}
-
-enum TestEnum: String, Codable, Equatable {
-  case optionA
-  case optionB
-  case optionC
+enum AccountType: String, Codable, Equatable {
+  case standard
+  case premium
+  case enterprise
 }
 
-struct NestedStruct: Codable, Equatable {
-  let id: UUID
-  let title: String
-  let nested: InnerStruct
-  let items: [TestEnum]
+struct UpdateProfileInput: Codable, Equatable {
+  let userId: UUID
+  let email: String
+  let age: Int
 }
 
-struct InnerStruct: Codable, Equatable {
-  let innerValue: String
-  let innerArray: [Int]
+struct UpdateProfileResult: Codable, Equatable {
+  let success: Bool
+  let updatedAt: String
 }
 
-struct TestError: LocalizedError {
+struct UserServiceError: LocalizedError {
   let message: String
 
   var errorDescription: String? { message }
 }
 
-struct TestUnknownError: Error {}
+struct UnknownError: Error {}
+
+struct EmptyRequest: Codable, Equatable {}
+
+struct EmptyResponse: Codable, Equatable {}
