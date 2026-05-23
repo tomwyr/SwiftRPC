@@ -61,5 +61,22 @@ let package = Package(
             name: "SwiftRPCTests",
             dependencies: ["SwiftRPC"],
         ),
+        .testTarget(
+            name: "SwiftRPCHummingbirdTests",
+            dependencies: [
+                "SwiftRPC",
+                "SwiftRPCHummingbird",
+                .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "HummingbirdTesting", package: "hummingbird"),
+            ],
+        ),
+        .testTarget(
+            name: "SwiftRPCIntegrationTests",
+            dependencies: [
+                "SwiftRPC",
+                "SwiftRPCHummingbird",
+                .product(name: "Hummingbird", package: "hummingbird"),
+            ],
+        ),
     ],
 )

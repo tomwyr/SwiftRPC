@@ -3,8 +3,8 @@ import Testing
 
 @testable import SwiftRPC
 
-@Suite struct SwiftRPCTests {
-  @Test func errorDescriptionDisplaysUserFacingMessage() {
+@Suite struct RPCErrorTests {
+  @Test func errorDescription() {
     let notFoundError = RPCError(code: .notFound, message: "Resource not found")
     #expect(notFoundError.errorDescription == "[NOT_FOUND] Resource not found")
 

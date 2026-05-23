@@ -31,7 +31,7 @@ struct HummingbirdHandlerRegistry<Context: RequestContext>:
         let response = RPCResponse<Output>.failure(rpcError)
         return try context.responseEncoder.encode(response, from: request, context: context)
       } catch {
-        let rpcError = RPCError(code: .internalError, message: error.localizedDescription)
+        let rpcError = RPCError(code: .internalError, message: error.outMessage)
         let response = RPCResponse<Output>.failure(rpcError)
         return try context.responseEncoder.encode(response, from: request, context: context)
       }
@@ -44,5 +44,11 @@ extension RPCServer {
   /// Register this server directly on a Hummingbird router
   public func register<Context: RequestContext>(on router: any RouterMethods<Context>) {
     self.register(on: HummingbirdHandlerRegistry(router: router))
+  }
+}
+
+extension Error {
+  var outMessage: String {
+    (self as? LocalizedError)?.errorDescription ?? "Internal error"
   }
 }
