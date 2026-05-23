@@ -1,3 +1,7 @@
+import Foundation
+import Hummingbird
+import HummingbirdTesting
+
 extension TestClientProtocol {
   func executeRpc(
     uri: String,

@@ -1,6 +1,5 @@
 import Foundation
 import Hummingbird
-import HummingbirdTesting
 import Testing
 
 @testable import SwiftRPC
