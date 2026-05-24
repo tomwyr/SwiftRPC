@@ -5,6 +5,11 @@ import Testing
 @testable import SwiftRPC
 @testable import SwiftRPCHummingbird
 
+let runners: [IntegrationTestRunner] = [
+  InMemoryTestRunner(),
+  HummingbirdTestRunner(),
+]
+
 protocol IntegrationTestRunner: Sendable {
   func run(
     _ handler: UserService & Sendable,

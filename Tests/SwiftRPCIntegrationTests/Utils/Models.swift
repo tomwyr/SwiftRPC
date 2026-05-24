@@ -4,29 +4,52 @@ import Foundation
 
 @RPC
 protocol UserService {
-  func logIn(password: String) async throws -> UserActionResult
-  func logOut() async throws -> Int
-  func create() async throws -> UserProfile
-  func delete(user: UserProfile) async throws -> Bool
+  func login(username: String, password: String) async throws -> AuthToken
+  func logout(token: AuthToken) async throws -> LogoutResponse
+  func register(email: String, password: String, profile: UserProfile) async throws -> UserID
+  func getProfile(userId: UserID) async throws -> UserProfile
+  func searchUsers(query: String, limit: Int) async throws -> [UserProfile]
+  func validateSession() async throws -> Bool
+  func batchDeleteUserIds(userIds: [UserID]) async throws -> Int
+  func upgradeAccount(userId: UserID, newType: AccountType) async throws -> Bool
+  func getAccountType(userId: UserID) async throws -> AccountType
+  func ping() async throws -> String
 }
 
-enum UserActionResult: Codable { case success }
-
-struct UserProfile: Codable, Equatable {
-  let userId: UUID
-  let fullName: String
-  let accountSettings: AccountSettings
-  let accountTypes: [AccountType]
+struct AuthToken: Codable, Equatable {
+  let token: String
+  let expiresAt: Int
 }
 
-struct AccountSettings: Codable, Equatable {
-  let privateProfile: Bool
-  let maxFollowers: Int
-  let contentLanguage: String
-}
+typealias UserID = String
 
 enum AccountType: String, Codable, Equatable {
   case standard
   case premium
   case enterprise
+}
+
+struct UserProfile: Codable, Equatable {
+  let userId: UserID
+  let email: String
+  let fullName: String
+  let settings: UserSettings
+  let accountType: AccountType
+}
+
+struct UserSettings: Codable, Equatable {
+  let notificationsEnabled: Bool
+  let theme: String
+  let language: String
+}
+
+struct LogoutResponse: Codable, Equatable {
+  let success: Bool
+  let message: String
+}
+
+enum ServiceError: Error {
+  case invalidCredentials
+  case profileNotFound
+  case updateFailed
 }

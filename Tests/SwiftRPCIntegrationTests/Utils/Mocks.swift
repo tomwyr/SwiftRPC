@@ -1,39 +1,134 @@
 import Foundation
 
 class MockUserService: UserService, @unchecked Sendable {
-  var logInCalls = 0
-  var logInParams = [String]()
-  var logOutCalls = 0
-  var createCalls = 0
-  var createResults = [UserProfile]()
-  var deleteCalls = 0
+  var loginCalls = 0
+  var loginUsernames = [String]()
+  var shouldFailLogin = false
+  var loginResult: AuthToken?
 
-  func logIn(password: String) async throws -> UserActionResult {
-    logInCalls += 1
-    logInParams.append(password)
-    return .success
-  }
+  var logoutCalls = 0
+  var logoutResult: LogoutResponse?
 
-  func logOut() async throws -> Int {
-    logOutCalls += 1
-    return 1
-  }
+  var registerCalls = 0
+  var registerResult: UserID?
 
-  func create() async throws -> UserProfile {
-    createCalls += 1
-    guard !createResults.isEmpty else {
-      return UserProfile(
-        userId: UUID(),
-        fullName: "DefaultUser",
-        accountSettings: AccountSettings(privateProfile: false, maxFollowers: 100, contentLanguage: "en"),
-        accountTypes: [.standard]
-      )
+  var getProfileCalls = 0
+  var getProfileUserIds = [UserID]()
+  var profile: UserProfile?
+
+  var searchUsersCalls = 0
+  var searchResults = [UserProfile]()
+
+  var validateSessionCalls = 0
+  var validateSessionResult: Bool?
+
+  var batchDeleteUserIdsCalls = 0
+  var batchDeleteUserIdsResult: Int?
+
+  var upgradeAccountCalls = 0
+  var upgradeAccountUserIds = [UserID]()
+  var upgradedAccountTypes = [AccountType]()
+  var upgradeAccountResult: Bool?
+
+  var getAccountTypeCalls = 0
+  var getAccountTypeUserIds = [UserID]()
+  var getAccountTypeResult: AccountType?
+
+  var pingCalls = 0
+  var pingResult: String?
+
+  var clearCacheCalls = 0
+
+  func login(username: String, password: String) async throws -> AuthToken {
+    loginCalls += 1
+    loginUsernames.append(username)
+
+    if shouldFailLogin {
+      throw ServiceError.invalidCredentials
     }
-    return createResults.removeFirst()
+
+    guard let result = loginResult else {
+      throw ServiceError.profileNotFound
+    }
+    return result
   }
 
-  func delete(user: UserProfile) async throws -> Bool {
-    deleteCalls += 1
-    return true
+  func logout(token: AuthToken) async throws -> LogoutResponse {
+    logoutCalls += 1
+    guard let result = logoutResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func register(email: String, password: String, profile: UserProfile) async throws -> UserID {
+    registerCalls += 1
+    guard let result = registerResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func getProfile(userId: UserID) async throws -> UserProfile {
+    getProfileCalls += 1
+    getProfileUserIds.append(userId)
+
+    guard let profile = profile else {
+      throw ServiceError.profileNotFound
+    }
+
+    return profile
+  }
+
+  func searchUsers(query: String, limit: Int) async throws -> [UserProfile] {
+    searchUsersCalls += 1
+    return searchResults
+  }
+
+  func validateSession() async throws -> Bool {
+    validateSessionCalls += 1
+    guard let result = validateSessionResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func batchDeleteUserIds(userIds: [UserID]) async throws -> Int {
+    batchDeleteUserIdsCalls += 1
+    guard let result = batchDeleteUserIdsResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func upgradeAccount(userId: UserID, newType: AccountType) async throws -> Bool {
+    upgradeAccountCalls += 1
+    upgradeAccountUserIds.append(userId)
+    upgradedAccountTypes.append(newType)
+    guard let result = upgradeAccountResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func getAccountType(userId: UserID) async throws -> AccountType {
+    getAccountTypeCalls += 1
+    getAccountTypeUserIds.append(userId)
+    guard let result = getAccountTypeResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func ping() async throws -> String {
+    pingCalls += 1
+    guard let result = pingResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
+  }
+
+  func clearCache() async throws {
+    clearCacheCalls += 1
   }
 }
