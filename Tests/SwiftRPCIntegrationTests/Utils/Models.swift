@@ -14,6 +14,7 @@ protocol UserService {
   func upgradeAccount(userId: UserID, newType: AccountType) async throws -> Bool
   func getAccountType(userId: UserID) async throws -> AccountType
   func ping() async throws -> String
+  func clearCache() async throws
 }
 
 struct AuthToken: Codable, Equatable {

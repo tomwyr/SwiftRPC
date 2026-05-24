@@ -154,6 +154,17 @@ extension IntegrationTests {
       #expect(handler.getAccountTypeUserIds == ["user-001"])
     }
   }
+
+  @Test(arguments: runners)
+  func voidInputWithVoidOutput(runner: IntegrationTestRunner) async throws {
+    try await runner.run(handler, server) { transport in
+      let client = UserServiceClient(transport: transport)
+
+      try await client.clearCache()
+
+      #expect(handler.clearCacheCalls == 1)
+    }
+  }
 }
 
 // Behavior tests
