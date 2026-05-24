@@ -25,6 +25,11 @@ struct RPCMacroTests {
         }
       }
 
+      private struct EchoRouterOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
       struct EchoRouterClient: Sendable {
         private let transport: any RPCTransport
 
@@ -41,7 +46,7 @@ struct RPCMacroTests {
           return try await transport.send(
             route: "/ping",
             input: input,
-            outputType: String.self
+            outputType: String.self,
           )
         }
       }
@@ -85,6 +90,11 @@ struct RPCMacroTests {
         }
       }
 
+      private struct PostRouterOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
       struct PostRouterClient: Sendable {
         private let transport: any RPCTransport
 
@@ -101,7 +111,7 @@ struct RPCMacroTests {
           return try await transport.send(
             route: "/createPost",
             input: input,
-            outputType: Post.self
+            outputType: Post.self,
           )
         }
       }
@@ -142,6 +152,11 @@ struct RPCMacroTests {
         }
       }
 
+      private struct HealthRouterOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
       struct HealthRouterClient: Sendable {
         private let transport: any RPCTransport
 
@@ -158,7 +173,7 @@ struct RPCMacroTests {
           return try await transport.send(
             route: "/ping",
             input: input,
-            outputType: String.self
+            outputType: String.self,
           )
         }
       }
@@ -173,6 +188,191 @@ struct RPCMacroTests {
         func register(on registry: any RPCHandlerRegistry) {
           registry.register(method: "ping") { (input: HealthRouterInputs.Ping) in
             try await self.handler.ping()
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func noReturnTypeDefaultsToVoid() {
+    assertMacro {
+      """
+      @RPC
+      protocol CommandRouter {
+        func execute(command: String) async throws
+      }
+      """
+    } expansion: {
+      """
+      protocol CommandRouter {
+        func execute(command: String) async throws
+      }
+
+      private struct CommandRouterInputs {
+        struct Execute: Codable {
+          let command: String
+        }
+      }
+
+      private struct CommandRouterOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct CommandRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func execute(command: String) async throws {
+          let input = CommandRouterInputs.Execute(command: command)
+          _ = try await transport.send(
+            route: "/execute",
+            input: input,
+            outputType: CommandRouterOutputs.Nothing.self,
+          )
+        }
+      }
+
+      struct CommandRouterServer<Handler: CommandRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "execute") { (input: CommandRouterInputs.Execute) in
+            try await self.handler.execute(command: input.command)
+            return CommandRouterOutputs.Nothing()
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func mixedVoidAndNonVoidMethods() {
+    assertMacro {
+      """
+      @RPC
+      protocol HybridRouter {
+        func getData(id: String) async throws -> Data
+        func setData(id: String, value: Data) async throws
+        func getStatus() async throws -> String
+        func clearCache() async throws -> Void
+      }
+      """
+    } expansion: {
+      """
+      protocol HybridRouter {
+        func getData(id: String) async throws -> Data
+        func setData(id: String, value: Data) async throws
+        func getStatus() async throws -> String
+        func clearCache() async throws -> Void
+      }
+
+      private struct HybridRouterInputs {
+        struct GetData: Codable {
+          let id: String
+        }
+
+        struct SetData: Codable {
+          let id: String
+          let value: Data
+        }
+
+        struct GetStatus: Codable {
+        }
+
+        struct ClearCache: Codable {
+        }
+      }
+
+      private struct HybridRouterOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct HybridRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func getData(id: String) async throws -> Data {
+          let input = HybridRouterInputs.GetData(id: id)
+          return try await transport.send(
+            route: "/getData",
+            input: input,
+            outputType: Data.self,
+          )
+        }
+
+        func setData(id: String, value: Data) async throws {
+          let input = HybridRouterInputs.SetData(id: id, value: value)
+          _ = try await transport.send(
+            route: "/setData",
+            input: input,
+            outputType: HybridRouterOutputs.Nothing.self,
+          )
+        }
+
+        func getStatus() async throws -> String {
+          let input = HybridRouterInputs.GetStatus()
+          return try await transport.send(
+            route: "/getStatus",
+            input: input,
+            outputType: String.self,
+          )
+        }
+
+        func clearCache() async throws {
+          let input = HybridRouterInputs.ClearCache()
+          _ = try await transport.send(
+            route: "/clearCache",
+            input: input,
+            outputType: HybridRouterOutputs.Nothing.self,
+          )
+        }
+      }
+
+      struct HybridRouterServer<Handler: HybridRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "getData") { (input: HybridRouterInputs.GetData) in
+            try await self.handler.getData(id: input.id)
+          }
+
+          registry.register(method: "setData") { (input: HybridRouterInputs.SetData) in
+            try await self.handler.setData(id: input.id, value: input.value)
+            return HybridRouterOutputs.Nothing()
+          }
+
+          registry.register(method: "getStatus") { (input: HybridRouterInputs.GetStatus) in
+            try await self.handler.getStatus()
+          }
+
+          registry.register(method: "clearCache") { (input: HybridRouterInputs.ClearCache) in
+            try await self.handler.clearCache()
+            return HybridRouterOutputs.Nothing()
           }
         }
       }
@@ -219,64 +419,6 @@ struct RPCMacroTests {
       """
     } expansion: {
       """
-      """
-    }
-  }
-
-  @Test func noReturnTypeDefaultsToVoid() {
-    assertMacro {
-      """
-      @RPC
-      protocol CommandRouter {
-        func execute(command: String) async throws
-      }
-      """
-    } expansion: {
-      """
-      protocol CommandRouter {
-        func execute(command: String) async throws
-      }
-
-      private struct CommandRouterInputs {
-        struct Execute: Codable {
-          let command: String
-        }
-      }
-
-      struct CommandRouterClient: Sendable {
-        private let transport: any RPCTransport
-
-        init(transport: any RPCTransport) {
-          self.transport = transport
-        }
-
-        init(baseURL: URL) {
-          self.transport = HTTPTransport(baseURL: baseURL)
-        }
-
-        func execute(command: String) async throws -> Void {
-          let input = CommandRouterInputs.Execute(command: command)
-          return try await transport.send(
-            route: "/execute",
-            input: input,
-            outputType: Void.self
-          )
-        }
-      }
-
-      struct CommandRouterServer<Handler: CommandRouter & Sendable>: RPCServer {
-        private let handler: Handler
-
-        init(handler: Handler) {
-          self.handler = handler
-        }
-
-        func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "execute") { (input: CommandRouterInputs.Execute) in
-            try await self.handler.execute(command: input.command)
-          }
-        }
-      }
       """
     }
   }

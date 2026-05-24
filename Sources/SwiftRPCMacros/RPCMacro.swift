@@ -21,10 +21,11 @@ public struct RPCMacro: PeerMacro {
     let protoName = proto.name.text
 
     let inputsDecl = try makeInputTypes(protoName: protoName, methods: methods)
+    let outputsDecl = try makeOutputTypes(protoName: protoName, methods: methods)
     let clientDecl = try makeClient(protoName: protoName, methods: methods)
     let serverDecl = try makeServer(protoName: protoName, methods: methods)
 
-    return [inputsDecl, clientDecl, serverDecl]
+    return [inputsDecl, outputsDecl, clientDecl, serverDecl]
   }
 }
 
@@ -32,6 +33,7 @@ struct RPCMethod {
   let name: String
   let params: [(label: String, name: String, type: String)]
   let returnType: String
+  let isVoidReturn: Bool
 
   init(from fn: FunctionDeclSyntax) throws {
     name = fn.name.text
@@ -50,7 +52,9 @@ struct RPCMethod {
       return (label: label, name: name, type: type)
     }
 
-    returnType = fn.signature.returnClause?.type.trimmedDescription ?? "Void"
+    let returnClause = fn.signature.returnClause
+    returnType = returnClause?.type.trimmedDescription ?? "Void"
+    isVoidReturn = returnClause.isVoidLike()
   }
 
   /// The internal input struct name, e.g. `GetUser`
@@ -69,7 +73,12 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
 
   for method in methods {
     if method.params.isEmpty {
-      memberDecls.append("  struct \(method.inputTypeName): Codable {}")
+      memberDecls.append(
+        """
+        struct \(method.inputTypeName): Codable {
+        }
+        """
+      )
     } else {
       let fields = method.params
         .map { "  let \($0.name): \($0.type)" }
@@ -80,7 +89,7 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
         struct \(method.inputTypeName): Codable {
         \(fields)
         }
-        """.indented())
+        """)
     }
   }
 
@@ -92,6 +101,15 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
     }
     """
 
+  return DeclSyntax(stringLiteral: source)
+}
+
+private func makeOutputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
+  let source = """
+    private struct \(protoName)Outputs {
+      struct Nothing: Codable {}
+    }
+    """
   return DeclSyntax(stringLiteral: source)
 }
 
@@ -110,14 +128,30 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
       .map { "\($0.name): \($0.name)" }
       .joined(separator: ", ")
 
-    let methodBody = """
-      func \(method.name)(\(paramList)) async throws -> \(method.returnType) {
-        let input = \(inputTypeName)(\(inputInit))
+    let sendCall =
+      if method.isVoidReturn {
+        """
+        _ = try await transport.send(
+          route: "\(method.route)",
+          input: input,
+          outputType: \(protoName)Outputs.Nothing.self,
+        )
+        """
+      } else {
+        """
         return try await transport.send(
           route: "\(method.route)",
           input: input,
-          outputType: \(method.returnType).self
+          outputType: \(method.returnType).self,
         )
+        """
+      }
+
+    let returnType = method.isVoidReturn ? "" : " -> \(method.returnType)"
+    let methodBody = """
+      func \(method.name)(\(paramList)) async throws\(returnType) {
+        let input = \(inputTypeName)(\(inputInit))
+      \(sendCall.indented())
       }
       """
     methodDecls.append(methodBody)
@@ -155,15 +189,25 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
       .map { "\($0.label): input.\($0.name)" }
       .joined(separator: ", ")
 
+    let handlerCall =
+      if method.isVoidReturn {
+        """
+        try await self.handler.\(method.name)(\(callArgs))
+        return \(protoName)Outputs.Nothing()
+        """
+      } else {
+        "try await self.handler.\(method.name)(\(callArgs))"
+      }
+
     let registration = """
       registry.register(method: "\(method.name)") { (input: \(protoName)Inputs.\(method.inputTypeName)) in
-        try await self.handler.\(method.name)(\(callArgs))
+      \(handlerCall.indented())
       }
       """
     methodRegistrations.append(registration)
   }
 
-  let allMethods = methodRegistrations.map { $0.indented(width: 4) }.joined(separator: "\n\n")
+  let allMethods = methodRegistrations.map { $0.indented(times: 2) }.joined(separator: "\n\n")
 
   let source = """
     struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
@@ -197,8 +241,23 @@ enum RPCMacroError: Error, CustomStringConvertible {
 }
 
 extension String {
-  fileprivate func indented(width: Int = 2) -> String {
-    let spaces = String(repeating: " ", count: width)
+  fileprivate func indented(times: Int = 1) -> String {
+    let width = 2
+    let spaces = String(repeating: " ", count: times * width)
     return split(separator: "\n").map { spaces + $0 }.joined(separator: "\n")
+  }
+}
+
+extension ReturnClauseSyntax? {
+  func isVoidLike() -> Bool {
+    guard let type = self?.type else { return true }
+
+    return if let tuple = type.as(TupleTypeSyntax.self) {
+      tuple.elements.isEmpty
+    } else if let identifier = type.as(IdentifierTypeSyntax.self) {
+      identifier.name.text == "Void"
+    } else {
+      false
+    }
   }
 }
