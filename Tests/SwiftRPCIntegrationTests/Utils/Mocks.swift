@@ -1,9 +1,12 @@
 import Foundation
 
+@testable import SwiftRPC
+
 class MockUserService: UserService, @unchecked Sendable {
   var loginCalls = 0
   var loginUsernames = [String]()
   var shouldFailLogin = false
+  var customLoginError: RPCError?
   var loginResult: AuthToken?
 
   var logoutCalls = 0
@@ -42,6 +45,10 @@ class MockUserService: UserService, @unchecked Sendable {
   func login(username: String, password: String) async throws -> AuthToken {
     loginCalls += 1
     loginUsernames.append(username)
+
+    if let customError = customLoginError {
+      throw customError
+    }
 
     if shouldFailLogin {
       throw ServiceError.invalidCredentials

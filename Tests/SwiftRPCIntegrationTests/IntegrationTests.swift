@@ -290,3 +290,40 @@ extension IntegrationTests {
     }
   }
 }
+
+// Error tests
+extension IntegrationTests {
+  @Test(arguments: runners)
+  func errorPropagation(runner: IntegrationTestRunner) async throws {
+    handler.shouldFailLogin = true
+
+    try await runner.run(handler, server) { transport in
+      let client = UserServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCError.self) {
+        try await client.login(username: "alice", password: "wrong")
+      }
+
+      #expect(error?.message == "Internal error")
+    }
+  }
+
+  @Test(arguments: runners)
+  func customErrorMessages(runner: IntegrationTestRunner) async throws {
+    handler.customLoginError = RPCError(
+      code: .unauthorized,
+      message: "Invalid credentials provided"
+    )
+
+    try await runner.run(handler, server) { transport in
+      let client = UserServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCError.self) {
+        try await client.login(username: "alice", password: "wrong")
+      }
+
+      #expect(error?.code == .unauthorized)
+      #expect(error?.message == "Invalid credentials provided")
+    }
+  }
+}
