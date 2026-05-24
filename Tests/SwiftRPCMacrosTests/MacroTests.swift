@@ -19,13 +19,13 @@ struct RPCMacroTests {
         func ping(message: String) async throws -> String
       }
 
-      private struct EchoRouterInputs {
+      private struct Inputs {
         struct Ping: Codable {
           let message: String
         }
       }
 
-      private struct EchoRouterOutputs {
+      private struct Outputs {
         struct Nothing: Codable {
         }
       }
@@ -42,7 +42,7 @@ struct RPCMacroTests {
         }
 
         func ping(message: String) async throws -> String {
-          let input = EchoRouterInputs.Ping(message: message)
+          let input = Inputs.Ping(message: message)
           return try await transport.send(
             route: "/ping",
             input: input,
@@ -59,7 +59,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { (input: EchoRouterInputs.Ping) in
+          registry.register(method: "ping") { (input: Inputs.Ping) in
             try await self.handler.ping(message: input.message)
           }
         }
@@ -82,7 +82,7 @@ struct RPCMacroTests {
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post
       }
 
-      private struct PostRouterInputs {
+      private struct Inputs {
         struct CreatePost: Codable {
           let title: String
           let body: String
@@ -90,7 +90,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct PostRouterOutputs {
+      private struct Outputs {
         struct Nothing: Codable {
         }
       }
@@ -107,7 +107,7 @@ struct RPCMacroTests {
         }
 
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
-          let input = PostRouterInputs.CreatePost(title: title, body: body, authorId: authorId)
+          let input = Inputs.CreatePost(title: title, body: body, authorId: authorId)
           return try await transport.send(
             route: "/createPost",
             input: input,
@@ -124,7 +124,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "createPost") { (input: PostRouterInputs.CreatePost) in
+          registry.register(method: "createPost") { (input: Inputs.CreatePost) in
             try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
           }
         }
@@ -147,12 +147,12 @@ struct RPCMacroTests {
         func ping() async throws -> String
       }
 
-      private struct HealthRouterInputs {
+      private struct Inputs {
         struct Ping: Codable {
         }
       }
 
-      private struct HealthRouterOutputs {
+      private struct Outputs {
         struct Nothing: Codable {
         }
       }
@@ -169,7 +169,7 @@ struct RPCMacroTests {
         }
 
         func ping() async throws -> String {
-          let input = HealthRouterInputs.Ping()
+          let input = Inputs.Ping()
           return try await transport.send(
             route: "/ping",
             input: input,
@@ -186,7 +186,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { (input: HealthRouterInputs.Ping) in
+          registry.register(method: "ping") { (input: Inputs.Ping) in
             try await self.handler.ping()
           }
         }
@@ -209,13 +209,13 @@ struct RPCMacroTests {
         func execute(command: String) async throws
       }
 
-      private struct CommandRouterInputs {
+      private struct Inputs {
         struct Execute: Codable {
           let command: String
         }
       }
 
-      private struct CommandRouterOutputs {
+      private struct Outputs {
         struct Nothing: Codable {
         }
       }
@@ -232,11 +232,11 @@ struct RPCMacroTests {
         }
 
         func execute(command: String) async throws {
-          let input = CommandRouterInputs.Execute(command: command)
+          let input = Inputs.Execute(command: command)
           _ = try await transport.send(
             route: "/execute",
             input: input,
-            outputType: CommandRouterOutputs.Nothing.self,
+            outputType: Outputs.Nothing.self,
           )
         }
       }
@@ -249,9 +249,9 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "execute") { (input: CommandRouterInputs.Execute) in
+          registry.register(method: "execute") { (input: Inputs.Execute) in
             try await self.handler.execute(command: input.command)
-            return CommandRouterOutputs.Nothing()
+            return Outputs.Nothing()
           }
         }
       }
@@ -279,7 +279,7 @@ struct RPCMacroTests {
         func clearCache() async throws -> Void
       }
 
-      private struct HybridRouterInputs {
+      private struct Inputs {
         struct GetData: Codable {
           let id: String
         }
@@ -296,7 +296,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct HybridRouterOutputs {
+      private struct Outputs {
         struct Nothing: Codable {
         }
       }
@@ -313,7 +313,7 @@ struct RPCMacroTests {
         }
 
         func getData(id: String) async throws -> Data {
-          let input = HybridRouterInputs.GetData(id: id)
+          let input = Inputs.GetData(id: id)
           return try await transport.send(
             route: "/getData",
             input: input,
@@ -322,16 +322,16 @@ struct RPCMacroTests {
         }
 
         func setData(id: String, value: Data) async throws {
-          let input = HybridRouterInputs.SetData(id: id, value: value)
+          let input = Inputs.SetData(id: id, value: value)
           _ = try await transport.send(
             route: "/setData",
             input: input,
-            outputType: HybridRouterOutputs.Nothing.self,
+            outputType: Outputs.Nothing.self,
           )
         }
 
         func getStatus() async throws -> String {
-          let input = HybridRouterInputs.GetStatus()
+          let input = Inputs.GetStatus()
           return try await transport.send(
             route: "/getStatus",
             input: input,
@@ -340,11 +340,11 @@ struct RPCMacroTests {
         }
 
         func clearCache() async throws {
-          let input = HybridRouterInputs.ClearCache()
+          let input = Inputs.ClearCache()
           _ = try await transport.send(
             route: "/clearCache",
             input: input,
-            outputType: HybridRouterOutputs.Nothing.self,
+            outputType: Outputs.Nothing.self,
           )
         }
       }
@@ -357,22 +357,22 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "getData") { (input: HybridRouterInputs.GetData) in
+          registry.register(method: "getData") { (input: Inputs.GetData) in
             try await self.handler.getData(id: input.id)
           }
 
-          registry.register(method: "setData") { (input: HybridRouterInputs.SetData) in
+          registry.register(method: "setData") { (input: Inputs.SetData) in
             try await self.handler.setData(id: input.id, value: input.value)
-            return HybridRouterOutputs.Nothing()
+            return Outputs.Nothing()
           }
 
-          registry.register(method: "getStatus") { (input: HybridRouterInputs.GetStatus) in
+          registry.register(method: "getStatus") { (input: Inputs.GetStatus) in
             try await self.handler.getStatus()
           }
 
-          registry.register(method: "clearCache") { (input: HybridRouterInputs.ClearCache) in
+          registry.register(method: "clearCache") { (input: Inputs.ClearCache) in
             try await self.handler.clearCache()
-            return HybridRouterOutputs.Nothing()
+            return Outputs.Nothing()
           }
         }
       }

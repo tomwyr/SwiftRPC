@@ -67,7 +67,7 @@ struct RPCMethod {
 }
 
 private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
-  let structName = "\(protoName)Inputs"
+  let structName = "Inputs"
 
   var memberDecls = [String]()
 
@@ -106,7 +106,7 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
 
 private func makeOutputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
   let source = """
-    private struct \(protoName)Outputs {
+    private struct Outputs {
       struct Nothing: Codable {}
     }
     """
@@ -119,7 +119,7 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
   var methodDecls = [String]()
 
   for method in methods {
-    let inputTypeName = "\(protoName)Inputs.\(method.inputTypeName)"
+    let inputTypeName = "Inputs.\(method.inputTypeName)"
 
     let paramList = method.params
       .map { "\($0.label): \($0.type)" }
@@ -134,7 +134,7 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
         _ = try await transport.send(
           route: "\(method.route)",
           input: input,
-          outputType: \(protoName)Outputs.Nothing.self,
+          outputType: Outputs.Nothing.self,
         )
         """
       } else {
@@ -193,14 +193,14 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
       if method.isVoidReturn {
         """
         try await self.handler.\(method.name)(\(callArgs))
-        return \(protoName)Outputs.Nothing()
+        return Outputs.Nothing()
         """
       } else {
         "try await self.handler.\(method.name)(\(callArgs))"
       }
 
     let registration = """
-      registry.register(method: "\(method.name)") { (input: \(protoName)Inputs.\(method.inputTypeName)) in
+      registry.register(method: "\(method.name)") { (input: Inputs.\(method.inputTypeName)) in
       \(handlerCall.indented())
       }
       """
