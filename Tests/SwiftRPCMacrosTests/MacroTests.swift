@@ -380,6 +380,377 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func customCodableTypes() {
+    assertMacro {
+      """
+      struct CustomItem: Codable {
+        let id: UUID
+        let name: String
+        let tags: [String]
+      }
+
+      struct ResultType: Codable {
+        let success: Bool
+        let data: String
+      }
+
+      @RPC
+      protocol ComplexRouter {
+        func processItems(items: [CustomItem]) async throws -> [ResultType]
+      }
+      """
+    } expansion: {
+      """
+      struct CustomItem: Codable {
+        let id: UUID
+        let name: String
+        let tags: [String]
+      }
+
+      struct ResultType: Codable {
+        let success: Bool
+        let data: String
+      }
+      protocol ComplexRouter {
+        func processItems(items: [CustomItem]) async throws -> [ResultType]
+      }
+
+      private struct Inputs {
+        struct ProcessItems: Codable {
+          let items: [CustomItem]
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct ComplexRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func processItems(items: [CustomItem]) async throws -> [ResultType] {
+          let input = Inputs.ProcessItems(items: items)
+          return try await transport.send(
+            route: "/processItems",
+            input: input,
+            outputType: [ResultType].self,
+          )
+        }
+      }
+
+      struct ComplexRouterServer<Handler: ComplexRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "processItems") { (input: Inputs.ProcessItems) in
+            try await self.handler.processItems(items: input.items)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func builtInCodableTypes() {
+    assertMacro {
+      """
+      @RPC
+      protocol BuiltInRouter {
+        func processDate(date: Date) async throws -> Date
+        func processURL(url: URL) async throws -> URL
+        func processUUID(uuid: UUID) async throws -> UUID
+        func processData(data: Data) async throws -> Data
+      }
+      """
+    } expansion: {
+      """
+      protocol BuiltInRouter {
+        func processDate(date: Date) async throws -> Date
+        func processURL(url: URL) async throws -> URL
+        func processUUID(uuid: UUID) async throws -> UUID
+        func processData(data: Data) async throws -> Data
+      }
+
+      private struct Inputs {
+        struct ProcessDate: Codable {
+          let date: Date
+        }
+
+        struct ProcessURL: Codable {
+          let url: URL
+        }
+
+        struct ProcessUUID: Codable {
+          let uuid: UUID
+        }
+
+        struct ProcessData: Codable {
+          let data: Data
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct BuiltInRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func processDate(date: Date) async throws -> Date {
+          let input = Inputs.ProcessDate(date: date)
+          return try await transport.send(
+            route: "/processDate",
+            input: input,
+            outputType: Date.self,
+          )
+        }
+
+        func processURL(url: URL) async throws -> URL {
+          let input = Inputs.ProcessURL(url: url)
+          return try await transport.send(
+            route: "/processURL",
+            input: input,
+            outputType: URL.self,
+          )
+        }
+
+        func processUUID(uuid: UUID) async throws -> UUID {
+          let input = Inputs.ProcessUUID(uuid: uuid)
+          return try await transport.send(
+            route: "/processUUID",
+            input: input,
+            outputType: UUID.self,
+          )
+        }
+
+        func processData(data: Data) async throws -> Data {
+          let input = Inputs.ProcessData(data: data)
+          return try await transport.send(
+            route: "/processData",
+            input: input,
+            outputType: Data.self,
+          )
+        }
+      }
+
+      struct BuiltInRouterServer<Handler: BuiltInRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "processDate") { (input: Inputs.ProcessDate) in
+            try await self.handler.processDate(date: input.date)
+          }
+
+          registry.register(method: "processURL") { (input: Inputs.ProcessURL) in
+            try await self.handler.processURL(url: input.url)
+          }
+
+          registry.register(method: "processUUID") { (input: Inputs.ProcessUUID) in
+            try await self.handler.processUUID(uuid: input.uuid)
+          }
+
+          registry.register(method: "processData") { (input: Inputs.ProcessData) in
+            try await self.handler.processData(data: input.data)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func multipleProtocolsInSameFile() {
+    assertMacro {
+      """
+      @RPC
+      protocol FirstRouter {
+        func firstMethod() async throws -> String
+      }
+
+      @RPC
+      protocol SecondRouter {
+        func secondMethod() async throws -> Int
+      }
+      """
+    } expansion: {
+      """
+      protocol FirstRouter {
+        func firstMethod() async throws -> String
+      }
+
+      private struct Inputs {
+        struct FirstMethod: Codable {
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct FirstRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func firstMethod() async throws -> String {
+          let input = Inputs.FirstMethod()
+          return try await transport.send(
+            route: "/firstMethod",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      struct FirstRouterServer<Handler: FirstRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "firstMethod") { (input: Inputs.FirstMethod) in
+            try await self.handler.firstMethod()
+          }
+        }
+      }
+      protocol SecondRouter {
+        func secondMethod() async throws -> Int
+      }
+
+      private struct Inputs {
+        struct SecondMethod: Codable {
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct SecondRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func secondMethod() async throws -> Int {
+          let input = Inputs.SecondMethod()
+          return try await transport.send(
+            route: "/secondMethod",
+            input: input,
+            outputType: Int.self,
+          )
+        }
+      }
+
+      struct SecondRouterServer<Handler: SecondRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "secondMethod") { (input: Inputs.SecondMethod) in
+            try await self.handler.secondMethod()
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func emptyProtocol() {
+    assertMacro {
+      """
+      @RPC
+      protocol EmptyRouter {
+      }
+      """
+    } expansion: {
+      """
+      protocol EmptyRouter {
+      }
+
+      private struct Inputs {
+
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct EmptyRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+
+      }
+
+      struct EmptyRouterServer<Handler: EmptyRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+
+        }
+      }
+      """
+    }
+  }
+}
+
+struct RPCMacroDiagnosticsTests {
   @Test func diagnosticOnNonProtocol() {
     assertMacro {
       """
@@ -417,8 +788,65 @@ struct RPCMacroTests {
         func sync(id: String) -> String
       }
       """
-    } expansion: {
+    }
+  }
+
+  @Test func diagnosticOnThrowsOnlyMethod() {
+    assertMacro {
       """
+      @RPC
+      protocol BadRouter {
+        func throwsOnly(id: String) throws -> String
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      ┬───
+      ╰─ 🛑 @RPC: 'throwsOnly' must be declared 'async throws'
+      protocol BadRouter {
+        func throwsOnly(id: String) throws -> String
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnAsyncOnlyMethod() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadRouter {
+        func asyncOnly(id: String) async -> String
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      ┬───
+      ╰─ 🛑 @RPC: 'asyncOnly' must be declared 'async throws'
+      protocol BadRouter {
+        func asyncOnly(id: String) async -> String
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnMethodWithNeitherAsyncNorThrows() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadRouter {
+        func regular(id: String) -> String
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      ┬───
+      ╰─ 🛑 @RPC: 'regular' must be declared 'async throws'
+      protocol BadRouter {
+        func regular(id: String) -> String
+      }
       """
     }
   }

@@ -67,7 +67,7 @@ public protocol RPCTransport: Sendable {
   func send<Input: Codable, Output: Codable>(
     route: String,
     input: Input,
-    outputType: Output.Type
+    outputType: Output.Type,
   ) async throws -> Output
 }
 
