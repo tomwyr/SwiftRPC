@@ -54,12 +54,12 @@ public struct RPCError: Error, LocalizedError, Codable, Sendable {
   }
 }
 
+/// Standard error codes for RPC failures.
 public enum RPCErrorCode: String, Codable, Sendable {
   case notFound = "NOT_FOUND"
   case badRequest = "BAD_REQUEST"
   case unauthorized = "UNAUTHORIZED"
   case internalError = "INTERNAL_ERROR"
-  case notImplemented = "NOT_IMPLEMENTED"
 }
 
 /// Implemented by the generated client. Not used directly.

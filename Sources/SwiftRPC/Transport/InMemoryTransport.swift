@@ -30,7 +30,7 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
     let method = String(route.dropFirst())
 
     guard let handler = handlers[method] else {
-      throw RPCError(code: .notImplemented, message: "Method not found: \(method)")
+      throw RPCError(code: .internalError, message: "Method not found: \(method)")
     }
 
     let result: Codable

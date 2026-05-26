@@ -244,7 +244,7 @@ import Testing
 
   @Test func errorCodes() async throws {
     let errorCodes: [RPCErrorCode] = [
-      .notFound, .badRequest, .unauthorized, .internalError, .notImplemented,
+      .notFound, .badRequest, .unauthorized, .internalError,
     ]
 
     for errorCode in errorCodes {

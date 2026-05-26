@@ -3,6 +3,8 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
+/// Macro implementation for the @RPC attribute.
+/// Generates client and server structs from protocol definitions.
 public struct RPCMacro: PeerMacro {
   public static func expansion(
     of node: AttributeSyntax,
