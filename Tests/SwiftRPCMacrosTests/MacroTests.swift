@@ -748,8 +748,291 @@ struct RPCMacroTests {
       """
     }
   }
+
+  @Test func protocolInheritance() {
+    assertMacro {
+      """
+      protocol BaseAuthProtocol {
+        func refreshToken(token: String) async throws -> String
+        func revokeToken(token: String) async throws
+      }
+
+      @RPC
+      protocol UserAuthProtocol: BaseAuthProtocol {
+        func authenticateUser(email: String, password: String) async throws -> AuthToken
+        func logoutUser(userId: UUID) async throws
+      }
+      """
+    } expansion: {
+      """
+      protocol BaseAuthProtocol {
+        func refreshToken(token: String) async throws -> String
+        func revokeToken(token: String) async throws
+      }
+      protocol UserAuthProtocol: BaseAuthProtocol {
+        func authenticateUser(email: String, password: String) async throws -> AuthToken
+        func logoutUser(userId: UUID) async throws
+      }
+
+      private struct Inputs {
+        struct AuthenticateUser: Codable {
+          let email: String
+          let password: String
+        }
+
+        struct LogoutUser: Codable {
+          let userId: UUID
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct UserAuthProtocolClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func authenticateUser(email: String, password: String) async throws -> AuthToken {
+          let input = Inputs.AuthenticateUser(email: email, password: password)
+          return try await transport.send(
+            route: "/authenticateUser",
+            input: input,
+            outputType: AuthToken.self,
+          )
+        }
+
+        func logoutUser(userId: UUID) async throws {
+          let input = Inputs.LogoutUser(userId: userId)
+          _ = try await transport.send(
+            route: "/logoutUser",
+            input: input,
+            outputType: Outputs.Nothing.self,
+          )
+        }
+      }
+
+      struct UserAuthProtocolServer<Handler: UserAuthProtocol & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "authenticateUser") { (input: Inputs.AuthenticateUser) in
+            try await self.handler.authenticateUser(email: input.email, password: input.password)
+          }
+
+          registry.register(method: "logoutUser") { (input: Inputs.LogoutUser) in
+            try await self.handler.logoutUser(userId: input.userId)
+            return Outputs.Nothing()
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func privateAccessModifiers() {
+    assertMacro {
+      """
+      @RPC
+      private protocol PrivateRouter {
+        private func processData(id: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      private protocol PrivateRouter {
+        private func processData(id: String) async throws -> String
+      }
+
+      private struct Inputs {
+        struct ProcessData: Codable {
+          let id: String
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct PrivateRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func processData(id: String) async throws -> String {
+          let input = Inputs.ProcessData(id: id)
+          return try await transport.send(
+            route: "/processData",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      struct PrivateRouterServer<Handler: PrivateRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "processData") { (input: Inputs.ProcessData) in
+            try await self.handler.processData(id: input.id)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func internalAccessModifiers() {
+    assertMacro {
+      """
+      @RPC
+      internal protocol InternalRouter {
+        internal func fetchData(id: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      internal protocol InternalRouter {
+        internal func fetchData(id: String) async throws -> String
+      }
+
+      private struct Inputs {
+        struct FetchData: Codable {
+          let id: String
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct InternalRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func fetchData(id: String) async throws -> String {
+          let input = Inputs.FetchData(id: id)
+          return try await transport.send(
+            route: "/fetchData",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      struct InternalRouterServer<Handler: InternalRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "fetchData") { (input: Inputs.FetchData) in
+            try await self.handler.fetchData(id: input.id)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func publicAccessModifiers() {
+    assertMacro {
+      """
+      @RPC
+      public protocol PublicRouter {
+        public func retrieveData(id: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      public protocol PublicRouter {
+        public func retrieveData(id: String) async throws -> String
+      }
+
+      private struct Inputs {
+        struct RetrieveData: Codable {
+          let id: String
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct PublicRouterClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func retrieveData(id: String) async throws -> String {
+          let input = Inputs.RetrieveData(id: id)
+          return try await transport.send(
+            route: "/retrieveData",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      struct PublicRouterServer<Handler: PublicRouter & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "retrieveData") { (input: Inputs.RetrieveData) in
+            try await self.handler.retrieveData(id: input.id)
+          }
+        }
+      }
+      """
+    }
+  }
 }
 
+@Suite(.macros(["RPC": RPCMacro.self]))
 struct RPCMacroDiagnosticsTests {
   @Test func diagnosticOnNonProtocol() {
     assertMacro {
