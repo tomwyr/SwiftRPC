@@ -1,7 +1,7 @@
 import Foundation
 import SwiftRPC
 
-actor AppRouterHandler: AppRouter {
+actor AppServiceHandler: AppService {
   private var users = [UUID: User]()
   private var posts = [UUID: Post]()
 

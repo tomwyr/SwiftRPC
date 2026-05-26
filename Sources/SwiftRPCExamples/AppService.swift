@@ -2,7 +2,7 @@ import Foundation
 import SwiftRPC
 
 @RPC
-protocol AppRouter {
+protocol AppService {
   func getUser(id: UUID) async throws -> User
   func listUsers() async throws -> [User]
   func createUser(name: String, email: String) async throws -> User

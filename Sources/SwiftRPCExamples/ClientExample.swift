@@ -4,7 +4,7 @@ import SwiftRPC
 struct ClientApp {
   static func run() async throws {
     let baseURL = URL(string: "http://localhost:8080")!
-    let client = AppRouterClient(baseURL: baseURL)
+    let client = AppServiceClient(baseURL: baseURL)
 
     // --- Create a user ---
     print("Creating user...")

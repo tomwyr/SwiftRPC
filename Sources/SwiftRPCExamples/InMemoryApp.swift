@@ -6,11 +6,11 @@ struct InMemoryApp {
     let transport = InMemoryTransport()
 
     // Register the server on the transport
-    let server = AppRouterServer(handler: AppRouterHandler())
+    let server = AppServiceServer(handler: AppServiceHandler())
     server.register(on: transport)
 
     // Create the client with the same transport
-    let client = AppRouterClient(transport: transport)
+    let client = AppServiceClient(transport: transport)
 
     print("=== In-Memory Client-Server Running ===\n")
 

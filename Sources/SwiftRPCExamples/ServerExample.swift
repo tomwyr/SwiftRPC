@@ -7,7 +7,7 @@ struct ServerApp {
   static func run() async throws {
     let router = Router()
 
-    let server = AppRouterServer(handler: AppRouterHandler())
+    let server = AppServiceServer(handler: AppServiceHandler())
     server.register(on: router)
 
     let app = Application(

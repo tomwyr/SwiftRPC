@@ -9,13 +9,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol EchoRouter {
+      protocol EchoService {
         func ping(message: String) async throws -> String
       }
       """
     } expansion: {
       """
-      protocol EchoRouter {
+      protocol EchoService {
         func ping(message: String) async throws -> String
       }
 
@@ -30,7 +30,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EchoRouterClient: Sendable {
+      struct EchoServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -51,7 +51,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EchoRouterServer<Handler: EchoRouter & Sendable>: RPCServer {
+      struct EchoServiceServer<Handler: EchoService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -72,13 +72,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol PostRouter {
+      protocol PostService {
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post
       }
       """
     } expansion: {
       """
-      protocol PostRouter {
+      protocol PostService {
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post
       }
 
@@ -95,7 +95,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PostRouterClient: Sendable {
+      struct PostServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -116,7 +116,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PostRouterServer<Handler: PostRouter & Sendable>: RPCServer {
+      struct PostServiceServer<Handler: PostService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -137,13 +137,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol HealthRouter {
+      protocol HealthService {
         func ping() async throws -> String
       }
       """
     } expansion: {
       """
-      protocol HealthRouter {
+      protocol HealthService {
         func ping() async throws -> String
       }
 
@@ -157,7 +157,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct HealthRouterClient: Sendable {
+      struct HealthServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -178,7 +178,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct HealthRouterServer<Handler: HealthRouter & Sendable>: RPCServer {
+      struct HealthServiceServer<Handler: HealthService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -199,13 +199,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol CommandRouter {
+      protocol CommandService {
         func execute(command: String) async throws
       }
       """
     } expansion: {
       """
-      protocol CommandRouter {
+      protocol CommandService {
         func execute(command: String) async throws
       }
 
@@ -220,7 +220,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct CommandRouterClient: Sendable {
+      struct CommandServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -241,7 +241,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct CommandRouterServer<Handler: CommandRouter & Sendable>: RPCServer {
+      struct CommandServiceServer<Handler: CommandService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -263,7 +263,7 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol HybridRouter {
+      protocol HybridService {
         func getData(id: String) async throws -> Data
         func setData(id: String, value: Data) async throws
         func getStatus() async throws -> String
@@ -272,7 +272,7 @@ struct RPCMacroTests {
       """
     } expansion: {
       """
-      protocol HybridRouter {
+      protocol HybridService {
         func getData(id: String) async throws -> Data
         func setData(id: String, value: Data) async throws
         func getStatus() async throws -> String
@@ -301,7 +301,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct HybridRouterClient: Sendable {
+      struct HybridServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -349,7 +349,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct HybridRouterServer<Handler: HybridRouter & Sendable>: RPCServer {
+      struct HybridServiceServer<Handler: HybridService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -395,7 +395,7 @@ struct RPCMacroTests {
       }
 
       @RPC
-      protocol ComplexRouter {
+      protocol ComplexService {
         func processItems(items: [CustomItem]) async throws -> [ResultType]
       }
       """
@@ -411,7 +411,7 @@ struct RPCMacroTests {
         let success: Bool
         let data: String
       }
-      protocol ComplexRouter {
+      protocol ComplexService {
         func processItems(items: [CustomItem]) async throws -> [ResultType]
       }
 
@@ -426,7 +426,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct ComplexRouterClient: Sendable {
+      struct ComplexServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -447,7 +447,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct ComplexRouterServer<Handler: ComplexRouter & Sendable>: RPCServer {
+      struct ComplexServiceServer<Handler: ComplexService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -468,7 +468,7 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol BuiltInRouter {
+      protocol BuiltInService {
         func processDate(date: Date) async throws -> Date
         func processURL(url: URL) async throws -> URL
         func processUUID(uuid: UUID) async throws -> UUID
@@ -477,7 +477,7 @@ struct RPCMacroTests {
       """
     } expansion: {
       """
-      protocol BuiltInRouter {
+      protocol BuiltInService {
         func processDate(date: Date) async throws -> Date
         func processURL(url: URL) async throws -> URL
         func processUUID(uuid: UUID) async throws -> UUID
@@ -507,7 +507,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct BuiltInRouterClient: Sendable {
+      struct BuiltInServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -555,7 +555,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct BuiltInRouterServer<Handler: BuiltInRouter & Sendable>: RPCServer {
+      struct BuiltInServiceServer<Handler: BuiltInService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -588,18 +588,18 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol FirstRouter {
+      protocol FirstService {
         func firstMethod() async throws -> String
       }
 
       @RPC
-      protocol SecondRouter {
+      protocol SecondService {
         func secondMethod() async throws -> Int
       }
       """
     } expansion: {
       """
-      protocol FirstRouter {
+      protocol FirstService {
         func firstMethod() async throws -> String
       }
 
@@ -613,7 +613,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct FirstRouterClient: Sendable {
+      struct FirstServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -634,7 +634,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct FirstRouterServer<Handler: FirstRouter & Sendable>: RPCServer {
+      struct FirstServiceServer<Handler: FirstService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -647,7 +647,7 @@ struct RPCMacroTests {
           }
         }
       }
-      protocol SecondRouter {
+      protocol SecondService {
         func secondMethod() async throws -> Int
       }
 
@@ -661,7 +661,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct SecondRouterClient: Sendable {
+      struct SecondServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -682,7 +682,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct SecondRouterServer<Handler: SecondRouter & Sendable>: RPCServer {
+      struct SecondServiceServer<Handler: SecondService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -703,12 +703,12 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      protocol EmptyRouter {
+      protocol EmptyService {
       }
       """
     } expansion: {
       """
-      protocol EmptyRouter {
+      protocol EmptyService {
       }
 
       private struct Inputs {
@@ -720,7 +720,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EmptyRouterClient: Sendable {
+      struct EmptyServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -734,7 +734,7 @@ struct RPCMacroTests {
 
       }
 
-      struct EmptyRouterServer<Handler: EmptyRouter & Sendable>: RPCServer {
+      struct EmptyServiceServer<Handler: EmptyService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -846,13 +846,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      private protocol PrivateRouter {
+      private protocol PrivateService {
         private func processData(id: String) async throws -> String
       }
       """
     } expansion: {
       """
-      private protocol PrivateRouter {
+      private protocol PrivateService {
         private func processData(id: String) async throws -> String
       }
 
@@ -867,7 +867,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PrivateRouterClient: Sendable {
+      struct PrivateServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -888,7 +888,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PrivateRouterServer<Handler: PrivateRouter & Sendable>: RPCServer {
+      struct PrivateServiceServer<Handler: PrivateService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -909,13 +909,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      internal protocol InternalRouter {
+      internal protocol InternalService {
         internal func fetchData(id: String) async throws -> String
       }
       """
     } expansion: {
       """
-      internal protocol InternalRouter {
+      internal protocol InternalService {
         internal func fetchData(id: String) async throws -> String
       }
 
@@ -930,7 +930,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct InternalRouterClient: Sendable {
+      struct InternalServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -951,7 +951,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct InternalRouterServer<Handler: InternalRouter & Sendable>: RPCServer {
+      struct InternalServiceServer<Handler: InternalService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -972,13 +972,13 @@ struct RPCMacroTests {
     assertMacro {
       """
       @RPC
-      public protocol PublicRouter {
+      public protocol PublicService {
         public func retrieveData(id: String) async throws -> String
       }
       """
     } expansion: {
       """
-      public protocol PublicRouter {
+      public protocol PublicService {
         public func retrieveData(id: String) async throws -> String
       }
 
@@ -993,7 +993,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PublicRouterClient: Sendable {
+      struct PublicServiceClient: Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -1014,7 +1014,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PublicRouterServer<Handler: PublicRouter & Sendable>: RPCServer {
+      struct PublicServiceServer<Handler: PublicService & Sendable>: RPCServer {
         private let handler: Handler
 
         init(handler: Handler) {
@@ -1058,7 +1058,7 @@ struct RPCMacroDiagnosticsTests {
     assertMacro {
       """
       @RPC
-      protocol BadRouter {
+      protocol BadService {
         func sync(id: String) -> String
       }
       """
@@ -1067,7 +1067,7 @@ struct RPCMacroDiagnosticsTests {
       @RPC
       ┬───
       ╰─ 🛑 @RPC: 'sync' must be declared 'async throws'
-      protocol BadRouter {
+      protocol BadService {
         func sync(id: String) -> String
       }
       """
@@ -1078,7 +1078,7 @@ struct RPCMacroDiagnosticsTests {
     assertMacro {
       """
       @RPC
-      protocol BadRouter {
+      protocol BadService {
         func throwsOnly(id: String) throws -> String
       }
       """
@@ -1087,7 +1087,7 @@ struct RPCMacroDiagnosticsTests {
       @RPC
       ┬───
       ╰─ 🛑 @RPC: 'throwsOnly' must be declared 'async throws'
-      protocol BadRouter {
+      protocol BadService {
         func throwsOnly(id: String) throws -> String
       }
       """
@@ -1098,7 +1098,7 @@ struct RPCMacroDiagnosticsTests {
     assertMacro {
       """
       @RPC
-      protocol BadRouter {
+      protocol BadService {
         func asyncOnly(id: String) async -> String
       }
       """
@@ -1107,7 +1107,7 @@ struct RPCMacroDiagnosticsTests {
       @RPC
       ┬───
       ╰─ 🛑 @RPC: 'asyncOnly' must be declared 'async throws'
-      protocol BadRouter {
+      protocol BadService {
         func asyncOnly(id: String) async -> String
       }
       """
@@ -1118,7 +1118,7 @@ struct RPCMacroDiagnosticsTests {
     assertMacro {
       """
       @RPC
-      protocol BadRouter {
+      protocol BadService {
         func regular(id: String) -> String
       }
       """
@@ -1127,7 +1127,7 @@ struct RPCMacroDiagnosticsTests {
       @RPC
       ┬───
       ╰─ 🛑 @RPC: 'regular' must be declared 'async throws'
-      protocol BadRouter {
+      protocol BadService {
         func regular(id: String) -> String
       }
       """
