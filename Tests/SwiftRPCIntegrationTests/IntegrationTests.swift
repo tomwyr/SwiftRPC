@@ -35,7 +35,7 @@ extension IntegrationTests {
       userId: "user-001",
       email: "alice@example.com",
       fullName: "Alice Johnson",
-      settings: UserSettings(notificationsEnabled: true, theme: "dark", language: "en"),
+      settings: UserSettings(notificationsEnabled: true, theme: "dark", sessionTimeout: 30),
       accountType: .standard,
     )
     handler.profile = expectedProfile
@@ -57,7 +57,7 @@ extension IntegrationTests {
       userId: "",
       email: "alice@example.com",
       fullName: "Alice Johnson",
-      settings: UserSettings(notificationsEnabled: true, theme: "dark", language: "en"),
+      settings: UserSettings(notificationsEnabled: true, theme: "dark", sessionTimeout: 30),
       accountType: .standard,
     )
     handler.registerResult = "user-001"
@@ -83,14 +83,14 @@ extension IntegrationTests {
         userId: "user-001",
         email: "alice@example.com",
         fullName: "Alice Johnson",
-        settings: UserSettings(notificationsEnabled: true, theme: "dark", language: "en"),
+        settings: UserSettings(notificationsEnabled: true, theme: "dark", sessionTimeout: 30),
         accountType: .standard,
       ),
       UserProfile(
         userId: "user-002",
         email: "alice.smith@example.com",
         fullName: "Alice Smith",
-        settings: UserSettings(notificationsEnabled: false, theme: "light", language: "en"),
+        settings: UserSettings(notificationsEnabled: false, theme: "light", sessionTimeout: 30),
         accountType: .premium,
       ),
     ]
@@ -165,6 +165,74 @@ extension IntegrationTests {
       #expect(handler.clearCacheCalls == 1)
     }
   }
+
+  @Test(arguments: runners)
+  func optionalInputs(runner: IntegrationTestRunner) async throws {
+    let expectedSettings = UserSettings(
+      notificationsEnabled: true,
+      theme: "dark",
+      sessionTimeout: 30,
+    )
+    handler.updateSettingsResult = expectedSettings
+
+    try await runner.run(handler, server) { transport in
+      let client = UserServiceClient(transport: transport)
+
+      let result = try await client.updateSettings(
+        userId: "user-001",
+        notificationsEnabled: true,
+        theme: nil,
+        sessionTimeout: nil,
+      )
+
+      #expect(result == expectedSettings)
+      #expect(handler.updateSettingsCalls == 1)
+      #expect(handler.updateSettingsUserIds == ["user-001"])
+      #expect(handler.updateSettingsNotificationsEnabled == [true])
+      #expect(handler.updateSettingsThemes == [nil])
+      #expect(handler.updateSettingsSessionTimeouts == [nil])
+    }
+  }
+
+  @Test(arguments: runners)
+  func optionalResult(runner: IntegrationTestRunner) async throws {
+    handler.settings = nil
+
+    try await runner.run(handler, server) { transport in
+      let client = UserServiceClient(transport: transport)
+
+      do {
+        let result = try await client.getSettings(userId: "user-999")
+        #expect(result == nil)
+        #expect(handler.getSettingsCalls == 1)
+        #expect(handler.getSettingsUserIds == ["user-999"])
+      } catch DecodingError.keyNotFound {
+        #expect(runner is HummingbirdTestRunner)
+        #expect(handler.getSettingsCalls == 1)
+        #expect(handler.getSettingsUserIds == ["user-999"])
+      }
+    }
+  }
+
+  @Test(arguments: runners)
+  func optionalResultWithValue(runner: IntegrationTestRunner) async throws {
+    let expectedSettings = UserSettings(
+      notificationsEnabled: true,
+      theme: "dark",
+      sessionTimeout: 30,
+    )
+    handler.settings = expectedSettings
+
+    try await runner.run(handler, server) { transport in
+      let client = UserServiceClient(transport: transport)
+
+      let result = try await client.getSettings(userId: "user-001")
+
+      #expect(result == expectedSettings)
+      #expect(handler.getSettingsCalls == 1)
+      #expect(handler.getSettingsUserIds == ["user-001"])
+    }
+  }
 }
 
 // Behavior tests
@@ -176,7 +244,7 @@ extension IntegrationTests {
       userId: "user-001",
       email: "alice@example.com",
       fullName: "Alice Johnson",
-      settings: UserSettings(notificationsEnabled: true, theme: "dark", language: "en"),
+      settings: UserSettings(notificationsEnabled: true, theme: "dark", sessionTimeout: 30),
       accountType: .standard,
     )
     handler.validateSessionResult = true
@@ -234,7 +302,7 @@ extension IntegrationTests {
       userId: "user-001",
       email: "alice@example.com",
       fullName: "Alice Johnson",
-      settings: UserSettings(notificationsEnabled: true, theme: "dark", language: "en"),
+      settings: UserSettings(notificationsEnabled: true, theme: "dark", sessionTimeout: 30),
       accountType: .standard,
     )
     handler.validateSessionResult = true

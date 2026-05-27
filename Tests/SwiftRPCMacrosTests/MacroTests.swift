@@ -1030,6 +1030,181 @@ struct RPCMacroTests {
       """
     }
   }
+
+  @Test func optionalParametersWithOptionalReturn() {
+    assertMacro {
+      """
+      struct User: Codable {
+        let id: UUID
+        let name: String
+      }
+
+      @RPC
+      protocol OptionalService {
+        func greet(name: String?) async throws -> String?
+        func processNumbers(numbers: [Int]?) async throws -> [Int]?
+        func updateUser(user: User?) async throws -> User?
+      }
+      """
+    } expansion: {
+      """
+      struct User: Codable {
+        let id: UUID
+        let name: String
+      }
+      protocol OptionalService {
+        func greet(name: String?) async throws -> String?
+        func processNumbers(numbers: [Int]?) async throws -> [Int]?
+        func updateUser(user: User?) async throws -> User?
+      }
+
+      private struct Inputs {
+        struct Greet: Codable {
+          let name: String?
+        }
+
+        struct ProcessNumbers: Codable {
+          let numbers: [Int]?
+        }
+
+        struct UpdateUser: Codable {
+          let user: User?
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct OptionalServiceClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func greet(name: String?) async throws -> String? {
+          let input = Inputs.Greet(name: name)
+          return try await transport.send(
+            route: "/greet",
+            input: input,
+            outputType: String?.self,
+          )
+        }
+
+        func processNumbers(numbers: [Int]?) async throws -> [Int]? {
+          let input = Inputs.ProcessNumbers(numbers: numbers)
+          return try await transport.send(
+            route: "/processNumbers",
+            input: input,
+            outputType: [Int]?.self,
+          )
+        }
+
+        func updateUser(user: User?) async throws -> User? {
+          let input = Inputs.UpdateUser(user: user)
+          return try await transport.send(
+            route: "/updateUser",
+            input: input,
+            outputType: User?.self,
+          )
+        }
+      }
+
+      struct OptionalServiceServer<Handler: OptionalService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "greet") { (input: Inputs.Greet) in
+            try await self.handler.greet(name: input.name)
+          }
+
+          registry.register(method: "processNumbers") { (input: Inputs.ProcessNumbers) in
+            try await self.handler.processNumbers(numbers: input.numbers)
+          }
+
+          registry.register(method: "updateUser") { (input: Inputs.UpdateUser) in
+            try await self.handler.updateUser(user: input.user)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func multipleOptionalParameters() {
+    assertMacro {
+      """
+      @RPC
+      protocol SearchService {
+        func search(query: String?, filters: [String]?, limit: Int?) async throws -> [String]
+      }
+      """
+    } expansion: {
+      """
+      protocol SearchService {
+        func search(query: String?, filters: [String]?, limit: Int?) async throws -> [String]
+      }
+
+      private struct Inputs {
+        struct Search: Codable {
+          let query: String?
+          let filters: [String]?
+          let limit: Int?
+        }
+      }
+
+      private struct Outputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct SearchServiceClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func search(query: String?, filters: [String]?, limit: Int?) async throws -> [String] {
+          let input = Inputs.Search(query: query, filters: filters, limit: limit)
+          return try await transport.send(
+            route: "/search",
+            input: input,
+            outputType: [String].self,
+          )
+        }
+      }
+
+      struct SearchServiceServer<Handler: SearchService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "search") { (input: Inputs.Search) in
+            try await self.handler.search(query: input.query, filters: input.filters, limit: input.limit)
+          }
+        }
+      }
+      """
+    }
+  }
 }
 
 @Suite(.macros(["RPC": RPCMacro.self]))

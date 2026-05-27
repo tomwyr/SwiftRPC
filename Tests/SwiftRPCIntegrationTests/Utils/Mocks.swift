@@ -42,6 +42,17 @@ class MockUserService: UserService, @unchecked Sendable {
 
   var clearCacheCalls = 0
 
+  var updateSettingsCalls = 0
+  var updateSettingsUserIds = [UserID]()
+  var updateSettingsNotificationsEnabled = [Bool?]()
+  var updateSettingsThemes = [String?]()
+  var updateSettingsSessionTimeouts = [Int?]()
+  var updateSettingsResult: UserSettings?
+
+  var getSettingsCalls = 0
+  var getSettingsUserIds = [UserID]()
+  var settings: UserSettings?
+
   func login(username: String, password: String) async throws -> AuthToken {
     loginCalls += 1
     loginUsernames.append(username)
@@ -137,5 +148,31 @@ class MockUserService: UserService, @unchecked Sendable {
 
   func clearCache() async throws {
     clearCacheCalls += 1
+  }
+
+  func updateSettings(
+    userId: UserID,
+    notificationsEnabled: Bool?,
+    theme: String?,
+    sessionTimeout: Int?
+  ) async throws -> UserSettings {
+    updateSettingsCalls += 1
+    updateSettingsUserIds.append(userId)
+    updateSettingsNotificationsEnabled.append(notificationsEnabled)
+    updateSettingsThemes.append(theme)
+    updateSettingsSessionTimeouts.append(sessionTimeout)
+
+    guard let result = updateSettingsResult else {
+      throw ServiceError.updateFailed
+    }
+
+    return result
+  }
+
+  func getSettings(userId: UserID) async throws -> UserSettings? {
+    getSettingsCalls += 1
+    getSettingsUserIds.append(userId)
+
+    return settings
   }
 }

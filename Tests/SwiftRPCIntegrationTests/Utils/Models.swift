@@ -15,6 +15,8 @@ protocol UserService {
   func getAccountType(userId: UserID) async throws -> AccountType
   func ping() async throws -> String
   func clearCache() async throws
+  func updateSettings(userId: UserID, notificationsEnabled: Bool?, theme: String?, sessionTimeout: Int?) async throws -> UserSettings
+  func getSettings(userId: UserID) async throws -> UserSettings?
 }
 
 struct AuthToken: Codable, Equatable {
@@ -41,7 +43,7 @@ struct UserProfile: Codable, Equatable {
 struct UserSettings: Codable, Equatable {
   let notificationsEnabled: Bool
   let theme: String
-  let language: String
+  let sessionTimeout: Int
 }
 
 struct LogoutResponse: Codable, Equatable {
