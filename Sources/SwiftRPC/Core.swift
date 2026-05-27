@@ -23,9 +23,15 @@ public enum RPCResponse<Output: Codable>: Codable {
     if container.contains(.ok) {
       let output = try container.decode(Output.self, forKey: .ok)
       self = .success(output)
-    } else {
+    } else if container.contains(.error) {
       let error = try container.decode(RPCError.self, forKey: .error)
       self = .failure(error)
+    } else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .ok,
+        in: container,
+        debugDescription: "Expected either 'ok' or 'error' key, but neither was found"
+      )
     }
   }
 

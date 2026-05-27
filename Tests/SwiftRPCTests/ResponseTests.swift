@@ -4,7 +4,7 @@ import Testing
 @testable import SwiftRPC
 
 @Suite struct ResponseTests {
-  @Test func encodeNilOptional() throws {
+  @Test func encodeNullOptional() throws {
     let response = RPCResponse<String?>.success(nil)
     let encoder = JSONEncoder()
 
@@ -24,7 +24,7 @@ import Testing
     #expect(jsonString.contains("ok"))
   }
 
-  @Test func decodeNilOptional() throws {
+  @Test func decodeNullOptional() throws {
     let jsonString = #"{"ok":null}"#
     let data = jsonString.data(using: .utf8)!
 
