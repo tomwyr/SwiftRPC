@@ -189,4 +189,22 @@ import Testing
 
     #expect(caughtError != nil)
   }
+
+  @Test func nilOptionalReturn() async throws {
+    let session = MockTransportURLSession { request in
+      let response = makeResponse(for: request, status: 200)
+      let body = try rpcEncode(.success(nil as String?))
+      return (body, response)
+    }
+
+    let transport = makeHTTPTransport(
+      baseURL: "https://api.example.com", session: session,
+    )
+
+    let result: String? = try await transport.send(
+      route: "/test", input: "input", outputType: String?.self,
+    )
+
+    #expect(result == nil)
+  }
 }

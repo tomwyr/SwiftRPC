@@ -20,7 +20,8 @@ public enum RPCResponse<Output: Codable>: Codable {
 
   public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    if let output = try container.decodeIfPresent(Output.self, forKey: .ok) {
+    if container.contains(.ok) {
+      let output = try container.decode(Output.self, forKey: .ok)
       self = .success(output)
     } else {
       let error = try container.decode(RPCError.self, forKey: .error)
