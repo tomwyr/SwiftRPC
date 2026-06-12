@@ -19,7 +19,7 @@ extension IntegrationTests {
   func noInputWithPrimitiveOutput(runner: IntegrationTestRunner) async throws {
     handler.validateSessionResult = true
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let result = try await client.validateSession()
@@ -40,7 +40,7 @@ extension IntegrationTests {
     )
     handler.profile = expectedProfile
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let profile = try await client.getProfile(userId: "user-001")
@@ -62,7 +62,7 @@ extension IntegrationTests {
     )
     handler.registerResult = "user-001"
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let userId = try await client.register(
@@ -96,7 +96,7 @@ extension IntegrationTests {
     ]
     handler.searchResults = searchResults
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let results = try await client.searchUsers(query: "Alice", limit: 10)
@@ -112,7 +112,7 @@ extension IntegrationTests {
   func arrayInputWithPrimitiveOutput(runner: IntegrationTestRunner) async throws {
     handler.batchDeleteUserIdsResult = 3
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let deletedCount = try await client.batchDeleteUserIds(userIds: [
@@ -128,7 +128,7 @@ extension IntegrationTests {
   func enumInputWithPrimitiveOutput(runner: IntegrationTestRunner) async throws {
     handler.upgradeAccountResult = true
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let result = try await client.upgradeAccount(userId: "user-001", newType: .premium)
@@ -144,7 +144,7 @@ extension IntegrationTests {
   func primitiveInputWithEnumOutput(runner: IntegrationTestRunner) async throws {
     handler.getAccountTypeResult = .standard
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let accountType = try await client.getAccountType(userId: "user-001")
@@ -157,7 +157,7 @@ extension IntegrationTests {
 
   @Test(arguments: runners)
   func voidInputWithVoidOutput(runner: IntegrationTestRunner) async throws {
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       try await client.clearCache()
@@ -175,7 +175,7 @@ extension IntegrationTests {
     )
     handler.updateSettingsResult = expectedSettings
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let result = try await client.updateSettings(
@@ -198,7 +198,7 @@ extension IntegrationTests {
   func optionalResult(runner: IntegrationTestRunner) async throws {
     handler.settings = nil
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       do {
@@ -223,7 +223,7 @@ extension IntegrationTests {
     )
     handler.settings = expectedSettings
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let result = try await client.getSettings(userId: "user-001")
@@ -252,7 +252,7 @@ extension IntegrationTests {
     handler.upgradeAccountResult = true
     handler.getAccountTypeResult = .premium
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       _ = try await client.login(username: "alice", password: "pass1")
@@ -310,7 +310,7 @@ extension IntegrationTests {
     handler.upgradeAccountResult = true
     handler.getAccountTypeResult = .premium
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       async let loginTasks = [
@@ -376,7 +376,7 @@ extension IntegrationTests {
   func errorPropagation(runner: IntegrationTestRunner) async throws {
     handler.shouldFailLogin = true
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let error = await #expect(throws: RPCError.self) {
@@ -394,7 +394,7 @@ extension IntegrationTests {
       message: "Invalid credentials provided"
     )
 
-    try await runner.run(handler, server) { transport in
+    try await runner.run(server) { transport in
       let client = UserServiceClient(transport: transport)
 
       let error = await #expect(throws: RPCError.self) {

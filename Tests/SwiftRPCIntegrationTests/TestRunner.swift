@@ -12,7 +12,6 @@ let runners: [IntegrationTestRunner] = [
 
 protocol IntegrationTestRunner: Sendable {
   func run(
-    _ handler: UserService & Sendable,
     _ server: RPCServer,
     body: @escaping @Sendable (RPCTransport) async throws -> Void,
   ) async throws
@@ -20,7 +19,6 @@ protocol IntegrationTestRunner: Sendable {
 
 struct InMemoryTestRunner: IntegrationTestRunner {
   func run(
-    _ handler: UserService & Sendable,
     _ server: RPCServer,
     body: @escaping @Sendable (RPCTransport) async throws -> Void,
   ) async throws {
@@ -34,7 +32,6 @@ struct HummingbirdTestRunner: IntegrationTestRunner {
   let baseURL = URL(string: "http://127.0.0.1:8080")!
 
   func run(
-    _ handler: UserService & Sendable,
     _ server: RPCServer,
     body: @escaping @Sendable (RPCTransport) async throws -> Void,
   ) async throws {
