@@ -19,13 +19,13 @@ struct RPCMacroTests {
         func ping(message: String) async throws -> String
       }
 
-      private struct Inputs {
+      private struct EchoServiceInputs {
         struct Ping: Codable {
           let message: String
         }
       }
 
-      private struct Outputs {
+      private struct EchoServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -42,7 +42,7 @@ struct RPCMacroTests {
         }
 
         func ping(message: String) async throws -> String {
-          let input = Inputs.Ping(message: message)
+          let input = EchoServiceInputs.Ping(message: message)
           return try await transport.send(
             route: "/ping",
             input: input,
@@ -59,7 +59,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { (input: Inputs.Ping) in
+          registry.register(method: "ping") { (input: EchoServiceInputs.Ping) in
             try await self.handler.ping(message: input.message)
           }
         }
@@ -82,7 +82,7 @@ struct RPCMacroTests {
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post
       }
 
-      private struct Inputs {
+      private struct PostServiceInputs {
         struct CreatePost: Codable {
           let title: String
           let body: String
@@ -90,7 +90,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct Outputs {
+      private struct PostServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -107,7 +107,7 @@ struct RPCMacroTests {
         }
 
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
-          let input = Inputs.CreatePost(title: title, body: body, authorId: authorId)
+          let input = PostServiceInputs.CreatePost(title: title, body: body, authorId: authorId)
           return try await transport.send(
             route: "/createPost",
             input: input,
@@ -124,7 +124,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "createPost") { (input: Inputs.CreatePost) in
+          registry.register(method: "createPost") { (input: PostServiceInputs.CreatePost) in
             try await self.handler.createPost(title: input.title, body: input.body, authorId: input.authorId)
           }
         }
@@ -147,12 +147,12 @@ struct RPCMacroTests {
         func ping() async throws -> String
       }
 
-      private struct Inputs {
+      private struct HealthServiceInputs {
         struct Ping: Codable {
         }
       }
 
-      private struct Outputs {
+      private struct HealthServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -169,7 +169,7 @@ struct RPCMacroTests {
         }
 
         func ping() async throws -> String {
-          let input = Inputs.Ping()
+          let input = HealthServiceInputs.Ping()
           return try await transport.send(
             route: "/ping",
             input: input,
@@ -186,7 +186,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "ping") { (input: Inputs.Ping) in
+          registry.register(method: "ping") { (input: HealthServiceInputs.Ping) in
             try await self.handler.ping()
           }
         }
@@ -209,13 +209,13 @@ struct RPCMacroTests {
         func execute(command: String) async throws
       }
 
-      private struct Inputs {
+      private struct CommandServiceInputs {
         struct Execute: Codable {
           let command: String
         }
       }
 
-      private struct Outputs {
+      private struct CommandServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -232,11 +232,11 @@ struct RPCMacroTests {
         }
 
         func execute(command: String) async throws {
-          let input = Inputs.Execute(command: command)
+          let input = CommandServiceInputs.Execute(command: command)
           _ = try await transport.send(
             route: "/execute",
             input: input,
-            outputType: Outputs.Nothing.self,
+            outputType: CommandServiceOutputs.Nothing.self,
           )
         }
       }
@@ -249,9 +249,9 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "execute") { (input: Inputs.Execute) in
+          registry.register(method: "execute") { (input: CommandServiceInputs.Execute) in
             try await self.handler.execute(command: input.command)
-            return Outputs.Nothing()
+            return CommandServiceOutputs.Nothing()
           }
         }
       }
@@ -279,7 +279,7 @@ struct RPCMacroTests {
         func clearCache() async throws -> Void
       }
 
-      private struct Inputs {
+      private struct HybridServiceInputs {
         struct GetData: Codable {
           let id: String
         }
@@ -296,7 +296,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct Outputs {
+      private struct HybridServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -313,7 +313,7 @@ struct RPCMacroTests {
         }
 
         func getData(id: String) async throws -> Data {
-          let input = Inputs.GetData(id: id)
+          let input = HybridServiceInputs.GetData(id: id)
           return try await transport.send(
             route: "/getData",
             input: input,
@@ -322,16 +322,16 @@ struct RPCMacroTests {
         }
 
         func setData(id: String, value: Data) async throws {
-          let input = Inputs.SetData(id: id, value: value)
+          let input = HybridServiceInputs.SetData(id: id, value: value)
           _ = try await transport.send(
             route: "/setData",
             input: input,
-            outputType: Outputs.Nothing.self,
+            outputType: HybridServiceOutputs.Nothing.self,
           )
         }
 
         func getStatus() async throws -> String {
-          let input = Inputs.GetStatus()
+          let input = HybridServiceInputs.GetStatus()
           return try await transport.send(
             route: "/getStatus",
             input: input,
@@ -340,11 +340,11 @@ struct RPCMacroTests {
         }
 
         func clearCache() async throws {
-          let input = Inputs.ClearCache()
+          let input = HybridServiceInputs.ClearCache()
           _ = try await transport.send(
             route: "/clearCache",
             input: input,
-            outputType: Outputs.Nothing.self,
+            outputType: HybridServiceOutputs.Nothing.self,
           )
         }
       }
@@ -357,22 +357,22 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "getData") { (input: Inputs.GetData) in
+          registry.register(method: "getData") { (input: HybridServiceInputs.GetData) in
             try await self.handler.getData(id: input.id)
           }
 
-          registry.register(method: "setData") { (input: Inputs.SetData) in
+          registry.register(method: "setData") { (input: HybridServiceInputs.SetData) in
             try await self.handler.setData(id: input.id, value: input.value)
-            return Outputs.Nothing()
+            return HybridServiceOutputs.Nothing()
           }
 
-          registry.register(method: "getStatus") { (input: Inputs.GetStatus) in
+          registry.register(method: "getStatus") { (input: HybridServiceInputs.GetStatus) in
             try await self.handler.getStatus()
           }
 
-          registry.register(method: "clearCache") { (input: Inputs.ClearCache) in
+          registry.register(method: "clearCache") { (input: HybridServiceInputs.ClearCache) in
             try await self.handler.clearCache()
-            return Outputs.Nothing()
+            return HybridServiceOutputs.Nothing()
           }
         }
       }
@@ -415,13 +415,13 @@ struct RPCMacroTests {
         func processItems(items: [CustomItem]) async throws -> [ResultType]
       }
 
-      private struct Inputs {
+      private struct ComplexServiceInputs {
         struct ProcessItems: Codable {
           let items: [CustomItem]
         }
       }
 
-      private struct Outputs {
+      private struct ComplexServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -438,7 +438,7 @@ struct RPCMacroTests {
         }
 
         func processItems(items: [CustomItem]) async throws -> [ResultType] {
-          let input = Inputs.ProcessItems(items: items)
+          let input = ComplexServiceInputs.ProcessItems(items: items)
           return try await transport.send(
             route: "/processItems",
             input: input,
@@ -455,7 +455,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "processItems") { (input: Inputs.ProcessItems) in
+          registry.register(method: "processItems") { (input: ComplexServiceInputs.ProcessItems) in
             try await self.handler.processItems(items: input.items)
           }
         }
@@ -484,7 +484,7 @@ struct RPCMacroTests {
         func processData(data: Data) async throws -> Data
       }
 
-      private struct Inputs {
+      private struct BuiltInServiceInputs {
         struct ProcessDate: Codable {
           let date: Date
         }
@@ -502,7 +502,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct Outputs {
+      private struct BuiltInServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -519,7 +519,7 @@ struct RPCMacroTests {
         }
 
         func processDate(date: Date) async throws -> Date {
-          let input = Inputs.ProcessDate(date: date)
+          let input = BuiltInServiceInputs.ProcessDate(date: date)
           return try await transport.send(
             route: "/processDate",
             input: input,
@@ -528,7 +528,7 @@ struct RPCMacroTests {
         }
 
         func processURL(url: URL) async throws -> URL {
-          let input = Inputs.ProcessURL(url: url)
+          let input = BuiltInServiceInputs.ProcessURL(url: url)
           return try await transport.send(
             route: "/processURL",
             input: input,
@@ -537,7 +537,7 @@ struct RPCMacroTests {
         }
 
         func processUUID(uuid: UUID) async throws -> UUID {
-          let input = Inputs.ProcessUUID(uuid: uuid)
+          let input = BuiltInServiceInputs.ProcessUUID(uuid: uuid)
           return try await transport.send(
             route: "/processUUID",
             input: input,
@@ -546,7 +546,7 @@ struct RPCMacroTests {
         }
 
         func processData(data: Data) async throws -> Data {
-          let input = Inputs.ProcessData(data: data)
+          let input = BuiltInServiceInputs.ProcessData(data: data)
           return try await transport.send(
             route: "/processData",
             input: input,
@@ -563,19 +563,19 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "processDate") { (input: Inputs.ProcessDate) in
+          registry.register(method: "processDate") { (input: BuiltInServiceInputs.ProcessDate) in
             try await self.handler.processDate(date: input.date)
           }
 
-          registry.register(method: "processURL") { (input: Inputs.ProcessURL) in
+          registry.register(method: "processURL") { (input: BuiltInServiceInputs.ProcessURL) in
             try await self.handler.processURL(url: input.url)
           }
 
-          registry.register(method: "processUUID") { (input: Inputs.ProcessUUID) in
+          registry.register(method: "processUUID") { (input: BuiltInServiceInputs.ProcessUUID) in
             try await self.handler.processUUID(uuid: input.uuid)
           }
 
-          registry.register(method: "processData") { (input: Inputs.ProcessData) in
+          registry.register(method: "processData") { (input: BuiltInServiceInputs.ProcessData) in
             try await self.handler.processData(data: input.data)
           }
         }
@@ -603,12 +603,12 @@ struct RPCMacroTests {
         func firstMethod() async throws -> String
       }
 
-      private struct Inputs {
+      private struct FirstServiceInputs {
         struct FirstMethod: Codable {
         }
       }
 
-      private struct Outputs {
+      private struct FirstServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -625,7 +625,7 @@ struct RPCMacroTests {
         }
 
         func firstMethod() async throws -> String {
-          let input = Inputs.FirstMethod()
+          let input = FirstServiceInputs.FirstMethod()
           return try await transport.send(
             route: "/firstMethod",
             input: input,
@@ -642,7 +642,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "firstMethod") { (input: Inputs.FirstMethod) in
+          registry.register(method: "firstMethod") { (input: FirstServiceInputs.FirstMethod) in
             try await self.handler.firstMethod()
           }
         }
@@ -651,12 +651,12 @@ struct RPCMacroTests {
         func secondMethod() async throws -> Int
       }
 
-      private struct Inputs {
+      private struct SecondServiceInputs {
         struct SecondMethod: Codable {
         }
       }
 
-      private struct Outputs {
+      private struct SecondServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -673,7 +673,7 @@ struct RPCMacroTests {
         }
 
         func secondMethod() async throws -> Int {
-          let input = Inputs.SecondMethod()
+          let input = SecondServiceInputs.SecondMethod()
           return try await transport.send(
             route: "/secondMethod",
             input: input,
@@ -690,7 +690,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "secondMethod") { (input: Inputs.SecondMethod) in
+          registry.register(method: "secondMethod") { (input: SecondServiceInputs.SecondMethod) in
             try await self.handler.secondMethod()
           }
         }
@@ -711,11 +711,11 @@ struct RPCMacroTests {
       protocol EmptyService {
       }
 
-      private struct Inputs {
+      private struct EmptyServiceInputs {
 
       }
 
-      private struct Outputs {
+      private struct EmptyServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -774,7 +774,7 @@ struct RPCMacroTests {
         func logoutUser(userId: UUID) async throws
       }
 
-      private struct Inputs {
+      private struct UserAuthProtocolInputs {
         struct AuthenticateUser: Codable {
           let email: String
           let password: String
@@ -785,7 +785,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct Outputs {
+      private struct UserAuthProtocolOutputs {
         struct Nothing: Codable {
         }
       }
@@ -802,7 +802,7 @@ struct RPCMacroTests {
         }
 
         func authenticateUser(email: String, password: String) async throws -> AuthToken {
-          let input = Inputs.AuthenticateUser(email: email, password: password)
+          let input = UserAuthProtocolInputs.AuthenticateUser(email: email, password: password)
           return try await transport.send(
             route: "/authenticateUser",
             input: input,
@@ -811,11 +811,11 @@ struct RPCMacroTests {
         }
 
         func logoutUser(userId: UUID) async throws {
-          let input = Inputs.LogoutUser(userId: userId)
+          let input = UserAuthProtocolInputs.LogoutUser(userId: userId)
           _ = try await transport.send(
             route: "/logoutUser",
             input: input,
-            outputType: Outputs.Nothing.self,
+            outputType: UserAuthProtocolOutputs.Nothing.self,
           )
         }
       }
@@ -828,13 +828,13 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "authenticateUser") { (input: Inputs.AuthenticateUser) in
+          registry.register(method: "authenticateUser") { (input: UserAuthProtocolInputs.AuthenticateUser) in
             try await self.handler.authenticateUser(email: input.email, password: input.password)
           }
 
-          registry.register(method: "logoutUser") { (input: Inputs.LogoutUser) in
+          registry.register(method: "logoutUser") { (input: UserAuthProtocolInputs.LogoutUser) in
             try await self.handler.logoutUser(userId: input.userId)
-            return Outputs.Nothing()
+            return UserAuthProtocolOutputs.Nothing()
           }
         }
       }
@@ -856,13 +856,13 @@ struct RPCMacroTests {
         private func processData(id: String) async throws -> String
       }
 
-      private struct Inputs {
+      private struct PrivateServiceInputs {
         struct ProcessData: Codable {
           let id: String
         }
       }
 
-      private struct Outputs {
+      private struct PrivateServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -879,7 +879,7 @@ struct RPCMacroTests {
         }
 
         func processData(id: String) async throws -> String {
-          let input = Inputs.ProcessData(id: id)
+          let input = PrivateServiceInputs.ProcessData(id: id)
           return try await transport.send(
             route: "/processData",
             input: input,
@@ -896,7 +896,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "processData") { (input: Inputs.ProcessData) in
+          registry.register(method: "processData") { (input: PrivateServiceInputs.ProcessData) in
             try await self.handler.processData(id: input.id)
           }
         }
@@ -919,13 +919,13 @@ struct RPCMacroTests {
         internal func fetchData(id: String) async throws -> String
       }
 
-      private struct Inputs {
+      private struct InternalServiceInputs {
         struct FetchData: Codable {
           let id: String
         }
       }
 
-      private struct Outputs {
+      private struct InternalServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -942,7 +942,7 @@ struct RPCMacroTests {
         }
 
         func fetchData(id: String) async throws -> String {
-          let input = Inputs.FetchData(id: id)
+          let input = InternalServiceInputs.FetchData(id: id)
           return try await transport.send(
             route: "/fetchData",
             input: input,
@@ -959,7 +959,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "fetchData") { (input: Inputs.FetchData) in
+          registry.register(method: "fetchData") { (input: InternalServiceInputs.FetchData) in
             try await self.handler.fetchData(id: input.id)
           }
         }
@@ -982,13 +982,13 @@ struct RPCMacroTests {
         public func retrieveData(id: String) async throws -> String
       }
 
-      private struct Inputs {
+      private struct PublicServiceInputs {
         struct RetrieveData: Codable {
           let id: String
         }
       }
 
-      private struct Outputs {
+      private struct PublicServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -1005,7 +1005,7 @@ struct RPCMacroTests {
         }
 
         func retrieveData(id: String) async throws -> String {
-          let input = Inputs.RetrieveData(id: id)
+          let input = PublicServiceInputs.RetrieveData(id: id)
           return try await transport.send(
             route: "/retrieveData",
             input: input,
@@ -1022,7 +1022,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "retrieveData") { (input: Inputs.RetrieveData) in
+          registry.register(method: "retrieveData") { (input: PublicServiceInputs.RetrieveData) in
             try await self.handler.retrieveData(id: input.id)
           }
         }
@@ -1058,7 +1058,7 @@ struct RPCMacroTests {
         func updateUser(user: User?) async throws -> User?
       }
 
-      private struct Inputs {
+      private struct OptionalServiceInputs {
         struct Greet: Codable {
           let name: String?
         }
@@ -1072,7 +1072,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct Outputs {
+      private struct OptionalServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -1089,7 +1089,7 @@ struct RPCMacroTests {
         }
 
         func greet(name: String?) async throws -> String? {
-          let input = Inputs.Greet(name: name)
+          let input = OptionalServiceInputs.Greet(name: name)
           return try await transport.send(
             route: "/greet",
             input: input,
@@ -1098,7 +1098,7 @@ struct RPCMacroTests {
         }
 
         func processNumbers(numbers: [Int]?) async throws -> [Int]? {
-          let input = Inputs.ProcessNumbers(numbers: numbers)
+          let input = OptionalServiceInputs.ProcessNumbers(numbers: numbers)
           return try await transport.send(
             route: "/processNumbers",
             input: input,
@@ -1107,7 +1107,7 @@ struct RPCMacroTests {
         }
 
         func updateUser(user: User?) async throws -> User? {
-          let input = Inputs.UpdateUser(user: user)
+          let input = OptionalServiceInputs.UpdateUser(user: user)
           return try await transport.send(
             route: "/updateUser",
             input: input,
@@ -1124,15 +1124,15 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "greet") { (input: Inputs.Greet) in
+          registry.register(method: "greet") { (input: OptionalServiceInputs.Greet) in
             try await self.handler.greet(name: input.name)
           }
 
-          registry.register(method: "processNumbers") { (input: Inputs.ProcessNumbers) in
+          registry.register(method: "processNumbers") { (input: OptionalServiceInputs.ProcessNumbers) in
             try await self.handler.processNumbers(numbers: input.numbers)
           }
 
-          registry.register(method: "updateUser") { (input: Inputs.UpdateUser) in
+          registry.register(method: "updateUser") { (input: OptionalServiceInputs.UpdateUser) in
             try await self.handler.updateUser(user: input.user)
           }
         }
@@ -1155,7 +1155,7 @@ struct RPCMacroTests {
         func search(query: String?, filters: [String]?, limit: Int?) async throws -> [String]
       }
 
-      private struct Inputs {
+      private struct SearchServiceInputs {
         struct Search: Codable {
           let query: String?
           let filters: [String]?
@@ -1163,7 +1163,7 @@ struct RPCMacroTests {
         }
       }
 
-      private struct Outputs {
+      private struct SearchServiceOutputs {
         struct Nothing: Codable {
         }
       }
@@ -1180,7 +1180,7 @@ struct RPCMacroTests {
         }
 
         func search(query: String?, filters: [String]?, limit: Int?) async throws -> [String] {
-          let input = Inputs.Search(query: query, filters: filters, limit: limit)
+          let input = SearchServiceInputs.Search(query: query, filters: filters, limit: limit)
           return try await transport.send(
             route: "/search",
             input: input,
@@ -1197,7 +1197,7 @@ struct RPCMacroTests {
         }
 
         func register(on registry: any RPCHandlerRegistry) {
-          registry.register(method: "search") { (input: Inputs.Search) in
+          registry.register(method: "search") { (input: SearchServiceInputs.Search) in
             try await self.handler.search(query: input.query, filters: input.filters, limit: input.limit)
           }
         }

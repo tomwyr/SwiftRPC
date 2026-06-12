@@ -69,7 +69,7 @@ struct RPCMethod {
 }
 
 private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
-  let structName = "Inputs"
+  let structName = "\(protoName)Inputs"
 
   var memberDecls = [String]()
 
@@ -108,7 +108,7 @@ private func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> D
 
 private func makeOutputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
   let source = """
-    private struct Outputs {
+    private struct \(protoName)Outputs {
       struct Nothing: Codable {}
     }
     """
@@ -117,11 +117,13 @@ private func makeOutputTypes(protoName: String, methods: [RPCMethod]) throws -> 
 
 private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
   let clientName = "\(protoName)Client"
+  let inputsName = "\(protoName)Inputs"
+  let outputsName = "\(protoName)Outputs"
 
   var methodDecls = [String]()
 
   for method in methods {
-    let inputTypeName = "Inputs.\(method.inputTypeName)"
+    let inputTypeName = "\(inputsName).\(method.inputTypeName)"
 
     let paramList = method.params
       .map { "\($0.label): \($0.type)" }
@@ -136,7 +138,7 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
         _ = try await transport.send(
           route: "\(method.route)",
           input: input,
-          outputType: Outputs.Nothing.self,
+          outputType: \(outputsName).Nothing.self,
         )
         """
       } else {
@@ -182,6 +184,8 @@ private func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclS
 
 private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
   let serverName = "\(protoName)Server"
+  let inputsName = "\(protoName)Inputs"
+  let outputsName = "\(protoName)Outputs"
 
   var methodRegistrations = [String]()
 
@@ -195,14 +199,14 @@ private func makeServer(protoName: String, methods: [RPCMethod]) throws -> DeclS
       if method.isVoidReturn {
         """
         try await self.handler.\(method.name)(\(callArgs))
-        return Outputs.Nothing()
+        return \(outputsName).Nothing()
         """
       } else {
         "try await self.handler.\(method.name)(\(callArgs))"
       }
 
     let registration = """
-      registry.register(method: "\(method.name)") { (input: Inputs.\(method.inputTypeName)) in
+      registry.register(method: "\(method.name)") { (input: \(inputsName).\(method.inputTypeName)) in
       \(handlerCall.indented())
       }
       """
