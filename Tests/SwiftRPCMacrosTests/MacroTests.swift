@@ -867,18 +867,18 @@ struct RPCMacroTests {
         }
       }
 
-      struct PrivateServiceClient: PrivateService, Sendable {
+      private struct PrivateServiceClient: PrivateService, Sendable {
         private let transport: any RPCTransport
 
-        init(transport: any RPCTransport) {
+        private init(transport: any RPCTransport) {
           self.transport = transport
         }
 
-        init(baseURL: URL) {
+        private init(baseURL: URL) {
           self.transport = HTTPTransport(baseURL: baseURL)
         }
 
-        func processData(id: String) async throws -> String {
+        private func processData(id: String) async throws -> String {
           let input = PrivateServiceInputs.ProcessData(id: id)
           return try await transport.send(
             route: "/processData",
@@ -888,14 +888,14 @@ struct RPCMacroTests {
         }
       }
 
-      struct PrivateServiceServer<Handler: PrivateService & Sendable>: RPCServer {
+      private struct PrivateServiceServer<Handler: PrivateService & Sendable>: RPCServer {
         private let handler: Handler
 
-        init(handler: Handler) {
+        private init(handler: Handler) {
           self.handler = handler
         }
 
-        func register(on registry: any RPCHandlerRegistry) {
+        private func register(on registry: any RPCHandlerRegistry) {
           registry.register(method: "processData") { (input: PrivateServiceInputs.ProcessData) in
             try await self.handler.processData(id: input.id)
           }
@@ -993,18 +993,18 @@ struct RPCMacroTests {
         }
       }
 
-      struct PublicServiceClient: PublicService, Sendable {
+      public struct PublicServiceClient: PublicService, Sendable {
         private let transport: any RPCTransport
 
-        init(transport: any RPCTransport) {
+        public init(transport: any RPCTransport) {
           self.transport = transport
         }
 
-        init(baseURL: URL) {
+        public init(baseURL: URL) {
           self.transport = HTTPTransport(baseURL: baseURL)
         }
 
-        func retrieveData(id: String) async throws -> String {
+        public func retrieveData(id: String) async throws -> String {
           let input = PublicServiceInputs.RetrieveData(id: id)
           return try await transport.send(
             route: "/retrieveData",
@@ -1014,16 +1014,79 @@ struct RPCMacroTests {
         }
       }
 
-      struct PublicServiceServer<Handler: PublicService & Sendable>: RPCServer {
+      public struct PublicServiceServer<Handler: PublicService & Sendable>: RPCServer {
         private let handler: Handler
 
-        init(handler: Handler) {
+        public init(handler: Handler) {
           self.handler = handler
         }
 
-        func register(on registry: any RPCHandlerRegistry) {
+        public func register(on registry: any RPCHandlerRegistry) {
           registry.register(method: "retrieveData") { (input: PublicServiceInputs.RetrieveData) in
             try await self.handler.retrieveData(id: input.id)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func packageAccessModifiers() {
+    assertMacro {
+      """
+      @RPC
+      package protocol PackageService {
+        package func fetchData(id: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      package protocol PackageService {
+        package func fetchData(id: String) async throws -> String
+      }
+
+      private struct PackageServiceInputs {
+        struct FetchData: Codable {
+          let id: String
+        }
+      }
+
+      private struct PackageServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      package struct PackageServiceClient: PackageService, Sendable {
+        private let transport: any RPCTransport
+
+        package init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        package init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        package func fetchData(id: String) async throws -> String {
+          let input = PackageServiceInputs.FetchData(id: id)
+          return try await transport.send(
+            route: "/fetchData",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      package struct PackageServiceServer<Handler: PackageService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        package init(handler: Handler) {
+          self.handler = handler
+        }
+
+        package func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "fetchData") { (input: PackageServiceInputs.FetchData) in
+            try await self.handler.fetchData(id: input.id)
           }
         }
       }
@@ -1342,6 +1405,87 @@ struct RPCMacroTests {
           ping: @escaping @Sendable (String) async throws -> String,
         ) -> EchoServiceInlineServerHandler {
           EchoServiceInlineServerHandler(
+            pingHandler: ping,
+          )
+        }
+      }
+      """
+    }
+  }
+
+  @Test func publicInlineServerHandlerAccessModifiers() {
+    assertMacro {
+      """
+      @RPC(inlineHandler: true)
+      public protocol PublicInlineService {
+        public func ping(message: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      public protocol PublicInlineService {
+        public func ping(message: String) async throws -> String
+      }
+
+      private struct PublicInlineServiceInputs {
+        struct Ping: Codable {
+          let message: String
+        }
+      }
+
+      private struct PublicInlineServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      public struct PublicInlineServiceClient: PublicInlineService, Sendable {
+        private let transport: any RPCTransport
+
+        public init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        public init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        public func ping(message: String) async throws -> String {
+          let input = PublicInlineServiceInputs.Ping(message: message)
+          return try await transport.send(
+            route: "/ping",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      public struct PublicInlineServiceServer<Handler: PublicInlineService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        public init(handler: Handler) {
+          self.handler = handler
+        }
+
+        public func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: PublicInlineServiceInputs.Ping) in
+            try await self.handler.ping(message: input.message)
+          }
+        }
+      }
+
+      public struct PublicInlineServiceInlineServerHandler: PublicInlineService, Sendable {
+        public var pingHandler: @Sendable (String) async throws -> String
+
+        public func ping(message: String) async throws -> String {
+          try await pingHandler(message)
+        }
+      }
+
+      extension PublicInlineService where Self == PublicInlineServiceInlineServerHandler {
+        public static func inline(
+          ping: @escaping @Sendable (String) async throws -> String,
+        ) -> PublicInlineServiceInlineServerHandler {
+          PublicInlineServiceInlineServerHandler(
             pingHandler: ping,
           )
         }

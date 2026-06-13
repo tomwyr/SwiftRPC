@@ -8,17 +8,23 @@ import SwiftSyntaxMacros
 public struct RPCMacro {
   private static func protocolInfo(
     from declaration: some SyntaxProtocol
-  ) throws -> (name: String, methods: [RPCMethod]) {
+  ) throws -> RPCProtocolInfo {
     guard let proto = declaration.as(ProtocolDeclSyntax.self) else {
       throw RPCMacroError.notAProtocol
     }
+
+    let access = RPCAccessLevel(from: proto.modifiers)
 
     let methods = try proto.memberBlock.members.compactMap { member -> RPCMethod? in
       guard let fn = member.decl.as(FunctionDeclSyntax.self) else { return nil }
       return try RPCMethod(from: fn)
     }
 
-    return (name: proto.name.text, methods: methods)
+    return RPCProtocolInfo(
+      name: proto.name.text,
+      access: access,
+      methods: methods,
+    )
   }
 
   private static func inlineServerHandlerEnabled(from node: AttributeSyntax) -> Bool {
@@ -38,29 +44,30 @@ extension RPCMacro: PeerMacro {
     providingPeersOf declaration: some DeclSyntaxProtocol,
     in context: some MacroExpansionContext,
   ) throws -> [DeclSyntax] {
-    let (protoName, methods) = try protocolInfo(from: declaration)
+    let proto = try protocolInfo(from: declaration)
 
-    let inputsDecl = try makeInputTypes(protoName: protoName, methods: methods)
-    let outputsDecl = try makeOutputTypes(protoName: protoName, methods: methods)
-    let clientDecl = try makeClient(protoName: protoName, methods: methods)
-    let serverDecl = try makeServer(protoName: protoName, methods: methods)
+    let inputsDecl = try makeInputTypes(proto: proto)
+    let outputsDecl = try makeOutputTypes(proto: proto)
+    let clientDecl = try makeClient(proto: proto)
+    let serverDecl = try makeServer(proto: proto)
 
     var declarations = [inputsDecl, outputsDecl, clientDecl, serverDecl]
 
     if inlineServerHandlerEnabled(from: node) {
-      let handlerDecl = try makeInlineServerHandler(protoName: protoName, methods: methods)
+      let handlerDecl = try makeInlineServerHandler(proto: proto)
       declarations.append(handlerDecl)
     }
 
     return declarations
   }
 
-  private static func makeInputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
+  private static func makeInputTypes(proto: RPCProtocolInfo) throws -> DeclSyntax {
+    let protoName = proto.name
     let structName = "\(protoName)Inputs"
 
     var memberDecls = [String]()
 
-    for method in methods {
+    for method in proto.methods {
       if method.params.isEmpty {
         memberDecls.append(
           """
@@ -93,24 +100,25 @@ extension RPCMacro: PeerMacro {
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeOutputTypes(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax
-  {
+  private static func makeOutputTypes(proto: RPCProtocolInfo) throws -> DeclSyntax {
     let source = """
-      private struct \(protoName)Outputs {
+      private struct \(proto.name)Outputs {
         struct Nothing: Codable {}
       }
       """
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeClient(protoName: String, methods: [RPCMethod]) throws -> DeclSyntax {
+  private static func makeClient(proto: RPCProtocolInfo) throws -> DeclSyntax {
+    let protoName = proto.name
     let clientName = "\(protoName)Client"
     let inputsName = "\(protoName)Inputs"
     let outputsName = "\(protoName)Outputs"
+    let access = proto.access.declarationPrefix
 
     var methodDecls = [String]()
 
-    for method in methods {
+    for method in proto.methods {
       let inputTypeName = "\(inputsName).\(method.inputTypeName)"
 
       let paramList = method.params
@@ -141,7 +149,7 @@ extension RPCMacro: PeerMacro {
 
       let returnType = method.isVoidReturn ? "" : " -> \(method.returnType)"
       let methodBody = """
-        func \(method.name)(\(paramList)) async throws\(returnType) {
+        \(access)func \(method.name)(\(paramList)) async throws\(returnType) {
           let input = \(inputTypeName)(\(inputInit))
         \(sendCall.indented())
         }
@@ -152,14 +160,14 @@ extension RPCMacro: PeerMacro {
     let allMethods = methodDecls.map { $0.indented() }.joined(separator: "\n\n")
 
     let source = """
-      struct \(clientName): \(protoName), Sendable {
+      \(access)struct \(clientName): \(protoName), Sendable {
         private let transport: any RPCTransport
 
-        init(transport: any RPCTransport) {
+        \(access)init(transport: any RPCTransport) {
           self.transport = transport
         }
 
-        init(baseURL: URL) {
+        \(access)init(baseURL: URL) {
           self.transport = HTTPTransport(baseURL: baseURL)
         }
 
@@ -170,17 +178,16 @@ extension RPCMacro: PeerMacro {
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeServer(
-    protoName: String,
-    methods: [RPCMethod],
-  ) throws -> DeclSyntax {
+  private static func makeServer(proto: RPCProtocolInfo) throws -> DeclSyntax {
+    let protoName = proto.name
     let serverName = "\(protoName)Server"
     let inputsName = "\(protoName)Inputs"
     let outputsName = "\(protoName)Outputs"
+    let access = proto.access.declarationPrefix
 
     var methodRegistrations = [String]()
 
-    for method in methods {
+    for method in proto.methods {
       // Argument forwarding: handler.getUser(id: input.id, ...)
       let callArgs = method.params
         .map { "\($0.label): input.\($0.name)" }
@@ -207,14 +214,14 @@ extension RPCMacro: PeerMacro {
     let allMethods = methodRegistrations.map { $0.indented(times: 2) }.joined(separator: "\n\n")
 
     let source = """
-      struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
+      \(access)struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
         private let handler: Handler
 
-        init(handler: Handler) {
+        \(access)init(handler: Handler) {
           self.handler = handler
         }
 
-        func register(on registry: any RPCHandlerRegistry) {
+        \(access)func register(on registry: any RPCHandlerRegistry) {
       \(allMethods)
         }
       }
@@ -223,20 +230,20 @@ extension RPCMacro: PeerMacro {
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeInlineServerHandler(protoName: String, methods: [RPCMethod]) throws
-    -> DeclSyntax
-  {
+  private static func makeInlineServerHandler(proto: RPCProtocolInfo) throws -> DeclSyntax {
+    let protoName = proto.name
     let handlerName = "\(protoName)InlineServerHandler"
+    let access = proto.access.declarationPrefix
 
     let propertyDecls =
-      methods.map { method in
-        "var \(method.handlerPropertyName): @Sendable \(method.closureParameterTypes) async throws -> \(method.returnType)"
+      proto.methods.map { method in
+        "\(access)var \(method.handlerPropertyName): @Sendable \(method.closureParameterTypes) async throws -> \(method.returnType)"
       }
       .joined(separator: "\n")
 
     let methodDecls =
-      methods
-      .map(makeInlineServerHandlerMethod)
+      proto.methods
+      .map { makeInlineServerHandlerMethod(method: $0, access: proto.access) }
       .joined(separator: "\n\n")
 
     let structMembers = [propertyDecls, methodDecls]
@@ -244,7 +251,7 @@ extension RPCMacro: PeerMacro {
       .joined(separator: "\n\n")
 
     let source = """
-      struct \(handlerName): \(protoName), Sendable {
+      \(access)struct \(handlerName): \(protoName), Sendable {
       \(structMembers)
       }
       """
@@ -252,7 +259,11 @@ extension RPCMacro: PeerMacro {
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeInlineServerHandlerMethod(method: RPCMethod) -> String {
+  private static func makeInlineServerHandlerMethod(
+    method: RPCMethod,
+    access: RPCAccessLevel,
+  ) -> String {
+    let access = access.declarationPrefix
     let signatureParams = method.params.map { param in
       if param.label == "_" {
         "_ \(param.name): \(param.type)"
@@ -268,7 +279,7 @@ extension RPCMacro: PeerMacro {
     let forwardedArgs = method.params.map(\.name).joined(separator: ", ")
 
     return """
-      func \(method.name)(\(signatureParams)) async throws\(returnType) {
+      \(access)func \(method.name)(\(signatureParams)) async throws\(returnType) {
         try await \(method.handlerPropertyName)(\(forwardedArgs))
       }
       """
@@ -287,25 +298,24 @@ extension RPCMacro: ExtensionMacro {
       return []
     }
 
-    let (_, methods) = try protocolInfo(from: declaration)
+    let proto = try protocolInfo(from: declaration)
 
-    let factoryDecl = try makeInlineServerHandlerFactory(
-      protoName: type.trimmedDescription,
-      methods: methods,
-    )
+    let factoryDecl = try makeInlineServerHandlerFactory(proto: proto)
 
     return [factoryDecl]
   }
 
   private static func makeInlineServerHandlerFactory(
-    protoName: String, methods: [RPCMethod],
+    proto: RPCProtocolInfo,
   ) throws -> ExtensionDeclSyntax {
+    let protoName = proto.name
     let handlerName = "\(protoName)InlineServerHandler"
+    let access = proto.access.declarationPrefix
 
-    guard !methods.isEmpty else {
+    guard !proto.methods.isEmpty else {
       let source = """
         extension \(protoName) where Self == \(handlerName) {
-          static func inline() -> \(handlerName) {
+          \(access)static func inline() -> \(handlerName) {
             \(handlerName)()
           }
         }
@@ -314,7 +324,7 @@ extension RPCMacro: ExtensionMacro {
     }
 
     let factoryParams =
-      methods
+      proto.methods
       .map { method in
         "\(method.name): @escaping @Sendable \(method.closureParameterTypes) async throws -> \(method.returnType),"
       }
@@ -322,14 +332,14 @@ extension RPCMacro: ExtensionMacro {
       .joined(separator: "\n")
 
     let forwardedArgs =
-      methods
+      proto.methods
       .map { "\($0.handlerPropertyName): \($0.name)," }
       .map { $0.indented(times: 3) }
       .joined(separator: "\n")
 
     let source = """
       extension \(protoName) where Self == \(handlerName) {
-        static func inline(
+        \(access)static func inline(
       \(factoryParams)
         ) -> \(handlerName) {
           \(handlerName)(
@@ -340,6 +350,44 @@ extension RPCMacro: ExtensionMacro {
       """
 
     return try ExtensionDeclSyntax("\(raw: source)")
+  }
+}
+
+struct RPCProtocolInfo {
+  let name: String
+  let access: RPCAccessLevel
+  let methods: [RPCMethod]
+}
+
+enum RPCAccessLevel: String {
+  case `private`
+  case `fileprivate`
+  case `internal`
+  case `package`
+  case `public`
+
+  init(from modifiers: DeclModifierListSyntax) {
+    let access = modifiers.lazy.compactMap { modifier -> RPCAccessLevel? in
+      switch modifier.name.text {
+      case "private": .private
+      case "fileprivate": .fileprivate
+      case "package": .package
+      case "public": .public
+      case "internal": .internal
+      default: nil
+      }
+    }.first
+
+    self = access ?? .internal
+  }
+
+  var declarationPrefix: String {
+    switch self {
+    case .internal:
+      ""
+    case .private, .fileprivate, .package, .public:
+      "\(rawValue) "
+    }
   }
 }
 
