@@ -248,7 +248,6 @@ extension IntegrationTests {
       accountType: .standard,
     )
     handler.validateSessionResult = true
-    handler.pingResult = "pong"
     handler.upgradeAccountResult = true
     handler.getAccountTypeResult = .premium
 
@@ -267,8 +266,6 @@ extension IntegrationTests {
       _ = try await client.validateSession()
       _ = try await client.validateSession()
 
-      _ = try await client.ping()
-
       _ = try await client.upgradeAccount(userId: "user-001", newType: .premium)
       _ = try await client.upgradeAccount(userId: "user-002", newType: .standard)
 
@@ -282,9 +279,6 @@ extension IntegrationTests {
       #expect(handler.getProfileUserIds == ["user-001", "user-002"])
 
       #expect(handler.validateSessionCalls == 4)
-
-      #expect(handler.pingCalls == 1)
-      #expect(handler.pingResult == "pong")
 
       #expect(handler.upgradeAccountCalls == 2)
       #expect(handler.upgradeAccountUserIds == ["user-001", "user-002"])
@@ -306,7 +300,6 @@ extension IntegrationTests {
       accountType: .standard,
     )
     handler.validateSessionResult = true
-    handler.pingResult = "pong"
     handler.upgradeAccountResult = true
     handler.getAccountTypeResult = .premium
 
@@ -331,8 +324,6 @@ extension IntegrationTests {
         client.validateSession(),
       ]
 
-      async let pingTask = client.ping()
-
       async let upgradeTasks = [
         client.upgradeAccount(userId: "user-001", newType: .premium),
         client.upgradeAccount(userId: "user-002", newType: .standard),
@@ -346,7 +337,6 @@ extension IntegrationTests {
       _ = try await loginTasks
       _ = try await profileTasks
       _ = try await validationTasks
-      _ = try await pingTask
       _ = try await upgradeTasks
       _ = try await accountTypeTasks
 
@@ -357,9 +347,6 @@ extension IntegrationTests {
       #expect(handler.getProfileUserIds.sorted() == ["user-001", "user-002"])
 
       #expect(handler.validateSessionCalls == 4)
-
-      #expect(handler.pingCalls == 1)
-      #expect(handler.pingResult == "pong")
 
       #expect(handler.upgradeAccountCalls == 2)
       #expect(handler.upgradeAccountUserIds.sorted() == ["user-001", "user-002"])
@@ -430,6 +417,26 @@ extension IntegrationTests {
       #expect(result.title == "batman")
       #expect(result.duration == 120)
       #expect(capturedQuery == "bat")
+    }
+  }
+}
+
+// Type conformance tests
+extension IntegrationTests {
+  @Test(arguments: runners)
+  func generatedClientConformsToServiceProtocol(runner: IntegrationTestRunner) async throws {
+    let handler = MockEchoService()
+    handler.pingResult = "pong"
+
+    let server = EchoServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let service: any EchoService = EchoServiceClient(transport: transport)
+
+      let result = try await service.ping()
+
+      #expect(result == "pong")
+      #expect(handler.pingCalls == 1)
     }
   }
 }

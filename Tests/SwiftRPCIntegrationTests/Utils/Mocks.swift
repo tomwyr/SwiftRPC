@@ -37,9 +37,6 @@ class MockUserService: UserService, @unchecked Sendable {
   var getAccountTypeUserIds = [UserID]()
   var getAccountTypeResult: AccountType?
 
-  var pingCalls = 0
-  var pingResult: String?
-
   var clearCacheCalls = 0
 
   var updateSettingsCalls = 0
@@ -138,14 +135,6 @@ class MockUserService: UserService, @unchecked Sendable {
     return result
   }
 
-  func ping() async throws -> String {
-    pingCalls += 1
-    guard let result = pingResult else {
-      throw ServiceError.updateFailed
-    }
-    return result
-  }
-
   func clearCache() async throws {
     clearCacheCalls += 1
   }
@@ -174,5 +163,18 @@ class MockUserService: UserService, @unchecked Sendable {
     getSettingsUserIds.append(userId)
 
     return settings
+  }
+}
+
+class MockEchoService: EchoService, @unchecked Sendable {
+  var pingCalls = 0
+  var pingResult: String?
+
+  func ping() async throws -> String {
+    pingCalls += 1
+    guard let result = pingResult else {
+      throw ServiceError.updateFailed
+    }
+    return result
   }
 }

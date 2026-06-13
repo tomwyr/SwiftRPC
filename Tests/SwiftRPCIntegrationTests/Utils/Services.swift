@@ -13,13 +13,17 @@ protocol UserService {
   func batchDeleteUserIds(userIds: [UserID]) async throws -> Int
   func upgradeAccount(userId: UserID, newType: AccountType) async throws -> Bool
   func getAccountType(userId: UserID) async throws -> AccountType
-  func ping() async throws -> String
   func clearCache() async throws
   func updateSettings(
     userId: UserID, notificationsEnabled: Bool?,
     theme: String?, sessionTimeout: Int?,
   ) async throws -> UserSettings
   func getSettings(userId: UserID) async throws -> UserSettings?
+}
+
+@RPC
+protocol EchoService {
+  func ping() async throws -> String
 }
 
 @RPC(inlineHandler: true)

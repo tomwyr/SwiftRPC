@@ -30,7 +30,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EchoServiceClient: Sendable {
+      struct EchoServiceClient: EchoService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -95,7 +95,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PostServiceClient: Sendable {
+      struct PostServiceClient: PostService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -157,7 +157,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct HealthServiceClient: Sendable {
+      struct HealthServiceClient: HealthService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -220,7 +220,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct CommandServiceClient: Sendable {
+      struct CommandServiceClient: CommandService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -301,7 +301,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct HybridServiceClient: Sendable {
+      struct HybridServiceClient: HybridService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -426,7 +426,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct ComplexServiceClient: Sendable {
+      struct ComplexServiceClient: ComplexService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -507,7 +507,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct BuiltInServiceClient: Sendable {
+      struct BuiltInServiceClient: BuiltInService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -613,7 +613,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct FirstServiceClient: Sendable {
+      struct FirstServiceClient: FirstService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -661,7 +661,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct SecondServiceClient: Sendable {
+      struct SecondServiceClient: SecondService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -720,7 +720,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EmptyServiceClient: Sendable {
+      struct EmptyServiceClient: EmptyService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -790,7 +790,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct UserAuthProtocolClient: Sendable {
+      struct UserAuthProtocolClient: UserAuthProtocol, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -867,7 +867,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PrivateServiceClient: Sendable {
+      struct PrivateServiceClient: PrivateService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -930,7 +930,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct InternalServiceClient: Sendable {
+      struct InternalServiceClient: InternalService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -993,7 +993,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct PublicServiceClient: Sendable {
+      struct PublicServiceClient: PublicService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -1077,7 +1077,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct OptionalServiceClient: Sendable {
+      struct OptionalServiceClient: OptionalService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -1168,7 +1168,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct SearchServiceClient: Sendable {
+      struct SearchServiceClient: SearchService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -1231,7 +1231,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EchoServiceClient: Sendable {
+      struct EchoServiceClient: EchoService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
@@ -1294,7 +1294,7 @@ struct RPCMacroTests {
         }
       }
 
-      struct EchoServiceClient: Sendable {
+      struct EchoServiceClient: EchoService, Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {

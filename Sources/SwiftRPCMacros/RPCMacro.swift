@@ -152,7 +152,7 @@ extension RPCMacro: PeerMacro {
     let allMethods = methodDecls.map { $0.indented() }.joined(separator: "\n\n")
 
     let source = """
-      struct \(clientName): Sendable {
+      struct \(clientName): \(protoName), Sendable {
         private let transport: any RPCTransport
 
         init(transport: any RPCTransport) {
