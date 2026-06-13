@@ -7,6 +7,7 @@ extension RPCMacro: PeerMacro {
     providingPeersOf declaration: some DeclSyntaxProtocol,
     in context: some MacroExpansionContext,
   ) throws -> [DeclSyntax] {
+    let config = RPCMacroConfig(from: node)
     let proto = try protocolInfo(from: node, attachedTo: declaration)
 
     let inputsDecl = try makeInputTypes(proto: proto)
@@ -16,7 +17,7 @@ extension RPCMacro: PeerMacro {
 
     var declarations = [inputsDecl, outputsDecl, clientDecl, serverDecl]
 
-    if inlineServerHandlerEnabled(from: node) {
+    if config.inlineHandler {
       let handlerDecl = try makeInlineServerHandler(proto: proto)
       declarations.append(handlerDecl)
     }

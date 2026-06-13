@@ -10,7 +10,9 @@ extension RPCMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    guard inlineServerHandlerEnabled(from: node) else {
+    let config = RPCMacroConfig(from: node)
+
+    guard config.inlineHandler else {
       return []
     }
 

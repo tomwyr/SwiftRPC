@@ -22,16 +22,6 @@ public struct RPCMacro {
       methods: methods,
     )
   }
-
-  static func inlineServerHandlerEnabled(from node: AttributeSyntax) -> Bool {
-    guard case .argumentList(let args) = node.arguments,
-      let handlerArg = args.first(where: { $0.label?.text == "inlineHandler" }),
-      let boolHandlerArg = handlerArg.expression.as(BooleanLiteralExprSyntax.self)
-    else {
-      return false
-    }
-    return boolHandlerArg.literal.text == "true"
-  }
 }
 
 extension String {

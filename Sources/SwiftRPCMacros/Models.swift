@@ -1,5 +1,25 @@
 import SwiftSyntax
 
+struct RPCMacroConfig {
+  var inlineHandler = false
+
+  init(from node: AttributeSyntax) {
+    guard case .argumentList(let args) = node.arguments else {
+      return
+    }
+
+    for arg in args {
+      switch arg.label?.text {
+      case "inlineHandler":
+        let boolArg = arg.expression.as(BooleanLiteralExprSyntax.self)
+        inlineHandler = boolArg?.literal.text == "true"
+      default:
+        continue
+      }
+    }
+  }
+}
+
 struct RPCProtocolInfo {
   let name: String
   let access: RPCAccessLevel
