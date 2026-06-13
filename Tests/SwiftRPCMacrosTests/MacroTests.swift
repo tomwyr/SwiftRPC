@@ -1596,4 +1596,238 @@ struct RPCMacroDiagnosticsTests {
       """
     }
   }
+
+  @Test func diagnosticOnAssociatedType() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        associatedtype Model
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        associatedtype Model
+                       ┬────
+                       ╰─ 🛑 @RPC: associated type 'Model' is not supported
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnGenericMethod() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        func fetch<T>(id: String) async throws -> T
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        func fetch<T>(id: String) async throws -> T
+             ┬────
+             ╰─ 🛑 @RPC: 'fetch' must not be generic
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnOverloadedMethods() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        func load(id: String) async throws -> String
+        func load(name: String) async throws -> String
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        func load(id: String) async throws -> String
+             ┬───
+             ╰─ 🛑 @RPC: overloaded method 'load' is not supported
+        func load(name: String) async throws -> String
+             ┬───
+             ╰─ 🛑 @RPC: overloaded method 'load' is not supported
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnUnsupportedParameterShapes() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        func update(value: inout String) async throws
+        func log(values: String...) async throws
+        func callback(handler: () -> Void) async throws
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        func update(value: inout String) async throws
+                           ┬───────────
+                           ╰─ 🛑 @RPC: parameter 'value' must not be inout
+        func log(values: String...) async throws
+                               ┬──
+                               ╰─ 🛑 @RPC: parameter 'values' must not be variadic
+        func callback(handler: () -> Void) async throws
+                               ┬─────────
+                               ╰─ 🛑 @RPC: parameter 'handler' must use a Codable-compatible type
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnInvalidInputTypes() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        func send(
+          tuple: (String, Int),
+          metatype: User.Type,
+          any: Any,
+          object: AnyObject,
+          selfReference: Self,
+          optional: Optional<() -> Void>,
+          array: [Any],
+          dictionary: [String: Self],
+          wrapper: Wrapper<(String, Int)>
+        ) async throws
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        func send(
+          tuple: (String, Int),
+                 ┬────────────
+                 ╰─ 🛑 @RPC: parameter 'tuple' must use a Codable-compatible type
+          metatype: User.Type,
+                    ┬────────
+                    ╰─ 🛑 @RPC: parameter 'metatype' must use a Codable-compatible type
+          any: Any,
+               ┬──
+               ╰─ 🛑 @RPC: parameter 'any' must use a Codable-compatible type
+          object: AnyObject,
+                  ┬────────
+                  ╰─ 🛑 @RPC: parameter 'object' must use a Codable-compatible type
+          selfReference: Self,
+                         ┬───
+                         ╰─ 🛑 @RPC: parameter 'selfReference' must use a Codable-compatible type
+          optional: Optional<() -> Void>,
+                             ┬─────────
+                             ╰─ 🛑 @RPC: parameter 'optional' must use a Codable-compatible type
+          array: [Any],
+                  ┬──
+                  ╰─ 🛑 @RPC: parameter 'array' must use a Codable-compatible type
+          dictionary: [String: Self],
+                               ┬───
+                               ╰─ 🛑 @RPC: parameter 'dictionary' must use a Codable-compatible type
+          wrapper: Wrapper<(String, Int)>
+                           ┬────────────
+                           ╰─ 🛑 @RPC: parameter 'wrapper' must use a Codable-compatible type
+        ) async throws
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnInvalidReturnTypes() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        func tuple() async throws -> (String, Int)
+        func metatype() async throws -> User.Type
+        func any() async throws -> Any
+        func object() async throws -> AnyObject
+        func selfReference() async throws -> Self
+        func optional() async throws -> Optional<() -> Void>
+        func array() async throws -> [Any]
+        func dictionary() async throws -> [String: Self]
+        func wrapper() async throws -> Wrapper<(String, Int)>
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        func tuple() async throws -> (String, Int)
+                                     ┬────────────
+                                     ╰─ 🛑 @RPC: return type of 'tuple' must be Codable-compatible
+        func metatype() async throws -> User.Type
+                                        ┬────────
+                                        ╰─ 🛑 @RPC: return type of 'metatype' must be Codable-compatible
+        func any() async throws -> Any
+                                   ┬──
+                                   ╰─ 🛑 @RPC: return type of 'any' must be Codable-compatible
+        func object() async throws -> AnyObject
+                                      ┬────────
+                                      ╰─ 🛑 @RPC: return type of 'object' must be Codable-compatible
+        func selfReference() async throws -> Self
+                                             ┬───
+                                             ╰─ 🛑 @RPC: return type of 'selfReference' must be Codable-compatible
+        func optional() async throws -> Optional<() -> Void>
+                                                 ┬─────────
+                                                 ╰─ 🛑 @RPC: return type of 'optional' must be Codable-compatible
+        func array() async throws -> [Any]
+                                      ┬──
+                                      ╰─ 🛑 @RPC: return type of 'array' must be Codable-compatible
+        func dictionary() async throws -> [String: Self]
+                                                   ┬───
+                                                   ╰─ 🛑 @RPC: return type of 'dictionary' must be Codable-compatible
+        func wrapper() async throws -> Wrapper<(String, Int)>
+                                               ┬────────────
+                                               ╰─ 🛑 @RPC: return type of 'wrapper' must be Codable-compatible
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnMultipleInvalidDefinitions() {
+    assertMacro {
+      """
+      @RPC
+      protocol BadService {
+        associatedtype Model
+        func load<T>(id: Any) -> Self
+        func load(id: String) async throws -> String
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC
+      protocol BadService {
+        associatedtype Model
+                       ┬────
+                       ╰─ 🛑 @RPC: associated type 'Model' is not supported
+        func load<T>(id: Any) -> Self
+                                 ┬───
+             │           │       ╰─ 🛑 @RPC: return type of 'load' must be Codable-compatible
+                         ┬──
+             │           ╰─ 🛑 @RPC: parameter 'id' must use a Codable-compatible type
+             ┬───
+             ├─ 🛑 @RPC: 'load' must not be generic
+             ├─ 🛑 @RPC: 'load' must be declared 'async throws'
+             ╰─ 🛑 @RPC: overloaded method 'load' is not supported
+        func load(id: String) async throws -> String
+             ┬───
+             ╰─ 🛑 @RPC: overloaded method 'load' is not supported
+      }
+      """
+    }
+  }
 }

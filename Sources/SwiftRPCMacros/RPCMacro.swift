@@ -19,10 +19,11 @@ public struct RPCMacro {
 
   private static func protocolInfo(from proto: ProtocolDeclSyntax) throws -> RPCProtocolInfo {
     let access = RPCAccessLevel(from: proto.modifiers)
+    try validate(proto: proto)
 
-    let methods = try proto.memberBlock.members.compactMap { member -> RPCMethod? in
+    let methods = proto.memberBlock.members.compactMap { member -> RPCMethod? in
       guard let fn = member.decl.as(FunctionDeclSyntax.self) else { return nil }
-      return try RPCMethod(from: fn)
+      return RPCMethod(from: fn)
     }
 
     return RPCProtocolInfo(
@@ -358,6 +359,177 @@ extension RPCMacro: ExtensionMacro {
   }
 }
 
+extension RPCMacro {
+  private static func validate(proto: ProtocolDeclSyntax) throws {
+    var diagnostics = [Diagnostic]()
+    var functionsByName = [String: [FunctionDeclSyntax]]()
+
+    for member in proto.memberBlock.members {
+      if let associatedType = member.decl.as(AssociatedTypeDeclSyntax.self) {
+        diagnostics.appendDiagnostic(
+          node: associatedType.name,
+          message: .associatedTypesAreUnsupported(name: associatedType.name.text),
+        )
+        continue
+      }
+
+      guard let fn = member.decl.as(FunctionDeclSyntax.self) else {
+        continue
+      }
+
+      functionsByName[fn.name.text, default: []].append(fn)
+      validate(method: fn, diagnostics: &diagnostics)
+    }
+
+    for functions in functionsByName.values where functions.count > 1 {
+      for fn in functions {
+        diagnostics.appendDiagnostic(
+          node: fn.name,
+          message: .overloadedMethod(name: fn.name.text),
+        )
+      }
+    }
+
+    guard diagnostics.isEmpty else {
+      throw DiagnosticsError(diagnostics: diagnostics)
+    }
+  }
+
+  private static func validate(
+    method fn: FunctionDeclSyntax,
+    diagnostics: inout [Diagnostic],
+  ) {
+    if fn.genericParameterClause != nil {
+      diagnostics.appendDiagnostic(
+        node: fn.name,
+        message: .genericMethod(name: fn.name.text),
+      )
+    }
+
+    if !fn.isAsyncThrows {
+      diagnostics.appendDiagnostic(
+        node: fn.name,
+        message: .methodMustBeAsyncThrows(name: fn.name.text),
+      )
+    }
+
+    for param in fn.signature.parameterClause.parameters {
+      if param.isInOut {
+        diagnostics.appendDiagnostic(
+          node: param.type,
+          message: .inOutParameter(name: param.localName),
+        )
+      }
+
+      if let ellipsis = param.ellipsis {
+        diagnostics.appendDiagnostic(
+          node: ellipsis,
+          message: .variadicParameter(name: param.localName),
+        )
+      }
+
+      validateCodableType(
+        param.type,
+        message: .parameterTypeMustBeCodable(name: param.localName),
+        diagnostics: &diagnostics,
+      )
+    }
+
+    if let returnClause = fn.signature.returnClause, !returnClause.isVoidLike() {
+      validateCodableType(
+        returnClause.type,
+        message: .returnTypeMustBeCodable(name: fn.name.text),
+        diagnostics: &diagnostics,
+      )
+    }
+  }
+
+  private static func validateCodableType(
+    _ type: TypeSyntax,
+    message: RPCMacroError,
+    diagnostics: inout [Diagnostic],
+  ) {
+    if type.is(FunctionTypeSyntax.self)
+      || type.is(TupleTypeSyntax.self)
+      || type.is(MetatypeTypeSyntax.self)
+    {
+      diagnostics.appendDiagnostic(node: type, message: message)
+      return
+    }
+
+    if let identifier = type.as(IdentifierTypeSyntax.self) {
+      if ["Any", "AnyObject", "Self"].contains(identifier.name.text) {
+        diagnostics.appendDiagnostic(node: identifier.name, message: message)
+        return
+      }
+
+      validateCodableTypes(
+        in: identifier.genericArgumentClause,
+        message: message,
+        diagnostics: &diagnostics,
+      )
+      return
+    }
+
+    if let optional = type.as(OptionalTypeSyntax.self) {
+      validateCodableType(optional.wrappedType, message: message, diagnostics: &diagnostics)
+      return
+    }
+
+    if let implicitlyUnwrappedOptional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+      validateCodableType(
+        implicitlyUnwrappedOptional.wrappedType,
+        message: message,
+        diagnostics: &diagnostics,
+      )
+      return
+    }
+
+    if let array = type.as(ArrayTypeSyntax.self) {
+      validateCodableType(array.element, message: message, diagnostics: &diagnostics)
+      return
+    }
+
+    if let dictionary = type.as(DictionaryTypeSyntax.self) {
+      validateCodableType(dictionary.key, message: message, diagnostics: &diagnostics)
+      validateCodableType(dictionary.value, message: message, diagnostics: &diagnostics)
+      return
+    }
+
+    if let attributed = type.as(AttributedTypeSyntax.self) {
+      validateCodableType(attributed.baseType, message: message, diagnostics: &diagnostics)
+      return
+    }
+
+    if let member = type.as(MemberTypeSyntax.self) {
+      validateCodableType(member.baseType, message: message, diagnostics: &diagnostics)
+      validateCodableTypes(
+        in: member.genericArgumentClause,
+        message: message,
+        diagnostics: &diagnostics,
+      )
+      return
+    }
+  }
+
+  private static func validateCodableTypes(
+    in genericArgumentClause: GenericArgumentClauseSyntax?,
+    message: RPCMacroError,
+    diagnostics: inout [Diagnostic],
+  ) {
+    guard let genericArgumentClause else { return }
+
+    for argument in genericArgumentClause.arguments {
+      switch argument.argument {
+      case .type(let type):
+        validateCodableType(type, message: message, diagnostics: &diagnostics)
+      case .expr:
+        continue
+      }
+    }
+  }
+}
+
 struct RPCProtocolInfo {
   let name: String
   let access: RPCAccessLevel
@@ -402,18 +574,8 @@ struct RPCMethod {
   let returnType: String
   let isVoidReturn: Bool
 
-  init(from fn: FunctionDeclSyntax) throws {
+  init(from fn: FunctionDeclSyntax) {
     name = fn.name.text
-
-    guard let effect = fn.signature.effectSpecifiers,
-      effect.asyncSpecifier != nil,
-      effect.throwsClause?.throwsSpecifier != nil
-    else {
-      try throwDiagnostics(
-        node: fn.name,
-        message: .methodMustBeAsyncThrows(name: fn.name.text),
-      )
-    }
 
     params = fn.signature.parameterClause.parameters.map { param in
       let label = param.firstName.text
@@ -447,14 +609,35 @@ struct RPCMethod {
 
 enum RPCMacroError: Error, CustomStringConvertible {
   case notAProtocol
+  case associatedTypesAreUnsupported(name: String)
+  case genericMethod(name: String)
+  case overloadedMethod(name: String)
+  case inOutParameter(name: String)
   case methodMustBeAsyncThrows(name: String)
+  case parameterTypeMustBeCodable(name: String)
+  case returnTypeMustBeCodable(name: String)
+  case variadicParameter(name: String)
 
   var description: String {
     switch self {
     case .notAProtocol:
       "@RPC can only be applied to a protocol"
+    case .associatedTypesAreUnsupported(let name):
+      "@RPC: associated type '\(name)' is not supported"
+    case .genericMethod(let name):
+      "@RPC: '\(name)' must not be generic"
+    case .overloadedMethod(let name):
+      "@RPC: overloaded method '\(name)' is not supported"
+    case .inOutParameter(let name):
+      "@RPC: parameter '\(name)' must not be inout"
     case .methodMustBeAsyncThrows(let name):
       "@RPC: '\(name)' must be declared 'async throws'"
+    case .parameterTypeMustBeCodable(let name):
+      "@RPC: parameter '\(name)' must use a Codable-compatible type"
+    case .returnTypeMustBeCodable(let name):
+      "@RPC: return type of '\(name)' must be Codable-compatible"
+    case .variadicParameter(let name):
+      "@RPC: parameter '\(name)' must not be variadic"
     }
   }
 }
@@ -465,12 +648,8 @@ extension RPCMacroError: DiagnosticMessage {
   }
 
   var diagnosticID: MessageID {
-    switch self {
-    case .notAProtocol:
-      MessageID(domain: "SwiftRPCMacros", id: "notAProtocol")
-    case .methodMustBeAsyncThrows:
-      MessageID(domain: "SwiftRPCMacros", id: "methodMustBeAsyncThrows")
-    }
+    let errorName = String(describing: self).replacing(/\(.*/, with: "")
+    return MessageID(domain: "SwiftRPCMacros", id: errorName)
   }
 
   var severity: DiagnosticSeverity {
@@ -482,9 +661,18 @@ private func throwDiagnostics(
   node: some SyntaxProtocol,
   message: RPCMacroError,
 ) throws -> Never {
-  throw DiagnosticsError(diagnostics: [
-    Diagnostic(node: node, message: message)
-  ])
+  var diagnostics = [Diagnostic]()
+  diagnostics.appendDiagnostic(node: node, message: message)
+  throw DiagnosticsError(diagnostics: diagnostics)
+}
+
+extension Array where Element == Diagnostic {
+  mutating func appendDiagnostic(
+    node: some SyntaxProtocol,
+    message: RPCMacroError,
+  ) {
+    append(Diagnostic(node: node, message: message))
+  }
 }
 
 extension String {
@@ -495,16 +683,52 @@ extension String {
   }
 }
 
-extension ReturnClauseSyntax? {
-  func isVoidLike() -> Bool {
-    guard let type = self?.type else { return true }
+extension FunctionDeclSyntax {
+  fileprivate var isAsyncThrows: Bool {
+    guard let effect = signature.effectSpecifiers else {
+      return false
+    }
 
-    return if let tuple = type.as(TupleTypeSyntax.self) {
+    return effect.asyncSpecifier != nil
+      && effect.throwsClause?.throwsSpecifier != nil
+  }
+}
+
+extension FunctionParameterSyntax {
+  var localName: String {
+    (secondName ?? firstName).text
+  }
+
+  var isInOut: Bool {
+    guard let attributed = type.as(AttributedTypeSyntax.self) else {
+      return false
+    }
+
+    for specifier in attributed.specifiers {
+      if specifier.as(SimpleTypeSpecifierSyntax.self)?.specifier.text == "inout" {
+        return true
+      }
+    }
+
+    return false
+  }
+}
+
+extension ReturnClauseSyntax {
+  func isVoidLike() -> Bool {
+    if let tuple = type.as(TupleTypeSyntax.self) {
       tuple.elements.isEmpty
     } else if let identifier = type.as(IdentifierTypeSyntax.self) {
       identifier.name.text == "Void"
     } else {
       false
     }
+  }
+}
+
+extension ReturnClauseSyntax? {
+  func isVoidLike() -> Bool {
+    guard let self else { return true }
+    return self.isVoidLike()
   }
 }
