@@ -1528,10 +1528,10 @@ struct RPCMacroDiagnosticsTests {
     } diagnostics: {
       """
       @RPC
-      ┬───
-      ╰─ 🛑 @RPC: 'sync' must be declared 'async throws'
       protocol BadService {
         func sync(id: String) -> String
+             ┬───
+             ╰─ 🛑 @RPC: 'sync' must be declared 'async throws'
       }
       """
     }
@@ -1548,10 +1548,10 @@ struct RPCMacroDiagnosticsTests {
     } diagnostics: {
       """
       @RPC
-      ┬───
-      ╰─ 🛑 @RPC: 'throwsOnly' must be declared 'async throws'
       protocol BadService {
         func throwsOnly(id: String) throws -> String
+             ┬─────────
+             ╰─ 🛑 @RPC: 'throwsOnly' must be declared 'async throws'
       }
       """
     }
@@ -1568,10 +1568,10 @@ struct RPCMacroDiagnosticsTests {
     } diagnostics: {
       """
       @RPC
-      ┬───
-      ╰─ 🛑 @RPC: 'asyncOnly' must be declared 'async throws'
       protocol BadService {
         func asyncOnly(id: String) async -> String
+             ┬────────
+             ╰─ 🛑 @RPC: 'asyncOnly' must be declared 'async throws'
       }
       """
     }
@@ -1588,10 +1588,10 @@ struct RPCMacroDiagnosticsTests {
     } diagnostics: {
       """
       @RPC
-      ┬───
-      ╰─ 🛑 @RPC: 'regular' must be declared 'async throws'
       protocol BadService {
         func regular(id: String) -> String
+             ┬──────
+             ╰─ 🛑 @RPC: 'regular' must be declared 'async throws'
       }
       """
     }

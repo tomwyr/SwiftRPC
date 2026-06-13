@@ -7,12 +7,17 @@ import SwiftSyntaxMacros
 /// Generates client and server structs from protocol definitions.
 public struct RPCMacro {
   private static func protocolInfo(
-    from declaration: some SyntaxProtocol
+    from node: AttributeSyntax,
+    attachedTo declaration: some SyntaxProtocol,
   ) throws -> RPCProtocolInfo {
     guard let proto = declaration.as(ProtocolDeclSyntax.self) else {
-      throw RPCMacroError.notAProtocol
+      try throwDiagnostics(node: node, message: .notAProtocol)
     }
 
+    return try protocolInfo(from: proto)
+  }
+
+  private static func protocolInfo(from proto: ProtocolDeclSyntax) throws -> RPCProtocolInfo {
     let access = RPCAccessLevel(from: proto.modifiers)
 
     let methods = try proto.memberBlock.members.compactMap { member -> RPCMethod? in
@@ -44,7 +49,7 @@ extension RPCMacro: PeerMacro {
     providingPeersOf declaration: some DeclSyntaxProtocol,
     in context: some MacroExpansionContext,
   ) throws -> [DeclSyntax] {
-    let proto = try protocolInfo(from: declaration)
+    let proto = try protocolInfo(from: node, attachedTo: declaration)
 
     let inputsDecl = try makeInputTypes(proto: proto)
     let outputsDecl = try makeOutputTypes(proto: proto)
@@ -298,7 +303,7 @@ extension RPCMacro: ExtensionMacro {
       return []
     }
 
-    let proto = try protocolInfo(from: declaration)
+    let proto = try protocolInfo(from: node, attachedTo: declaration)
 
     let factoryDecl = try makeInlineServerHandlerFactory(proto: proto)
 
@@ -404,7 +409,10 @@ struct RPCMethod {
       effect.asyncSpecifier != nil,
       effect.throwsClause?.throwsSpecifier != nil
     else {
-      throw RPCMacroError.methodMustBeAsyncThrows(name: fn.name.text)
+      try throwDiagnostics(
+        node: fn.name,
+        message: .methodMustBeAsyncThrows(name: fn.name.text),
+      )
     }
 
     params = fn.signature.parameterClause.parameters.map { param in
@@ -449,6 +457,34 @@ enum RPCMacroError: Error, CustomStringConvertible {
       "@RPC: '\(name)' must be declared 'async throws'"
     }
   }
+}
+
+extension RPCMacroError: DiagnosticMessage {
+  var message: String {
+    description
+  }
+
+  var diagnosticID: MessageID {
+    switch self {
+    case .notAProtocol:
+      MessageID(domain: "SwiftRPCMacros", id: "notAProtocol")
+    case .methodMustBeAsyncThrows:
+      MessageID(domain: "SwiftRPCMacros", id: "methodMustBeAsyncThrows")
+    }
+  }
+
+  var severity: DiagnosticSeverity {
+    .error
+  }
+}
+
+private func throwDiagnostics(
+  node: some SyntaxProtocol,
+  message: RPCMacroError,
+) throws -> Never {
+  throw DiagnosticsError(diagnostics: [
+    Diagnostic(node: node, message: message)
+  ])
 }
 
 extension String {
