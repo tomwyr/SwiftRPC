@@ -1205,6 +1205,150 @@ struct RPCMacroTests {
       """
     }
   }
+
+  @Test func inlineServerHandlerDisabled() {
+    assertMacro {
+      """
+      @RPC(inlineHandler: false)
+      protocol EchoService {
+        func ping(message: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      protocol EchoService {
+        func ping(message: String) async throws -> String
+      }
+
+      private struct EchoServiceInputs {
+        struct Ping: Codable {
+          let message: String
+        }
+      }
+
+      private struct EchoServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct EchoServiceClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func ping(message: String) async throws -> String {
+          let input = EchoServiceInputs.Ping(message: message)
+          return try await transport.send(
+            route: "/ping",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      struct EchoServiceServer<Handler: EchoService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: EchoServiceInputs.Ping) in
+            try await self.handler.ping(message: input.message)
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func inlineServerHandlerEnabled() {
+    assertMacro {
+      """
+      @RPC(inlineHandler: true)
+      protocol EchoService {
+        func ping(message: String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      protocol EchoService {
+        func ping(message: String) async throws -> String
+      }
+
+      private struct EchoServiceInputs {
+        struct Ping: Codable {
+          let message: String
+        }
+      }
+
+      private struct EchoServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct EchoServiceClient: Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func ping(message: String) async throws -> String {
+          let input = EchoServiceInputs.Ping(message: message)
+          return try await transport.send(
+            route: "/ping",
+            input: input,
+            outputType: String.self,
+          )
+        }
+      }
+
+      struct EchoServiceServer<Handler: EchoService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "ping") { (input: EchoServiceInputs.Ping) in
+            try await self.handler.ping(message: input.message)
+          }
+        }
+      }
+
+      struct EchoServiceInlineServerHandler: EchoService, Sendable {
+        var pingHandler: @Sendable (String) async throws -> String
+
+        func ping(message: String) async throws -> String {
+          try await pingHandler(message)
+        }
+      }
+
+      extension EchoService where Self == EchoServiceInlineServerHandler {
+        static func inline(
+          ping: @escaping @Sendable (String) async throws -> String,
+        ) -> EchoServiceInlineServerHandler {
+          EchoServiceInlineServerHandler(
+            pingHandler: ping,
+          )
+        }
+      }
+      """
+    }
+  }
 }
 
 @Suite(.macros(["RPC": RPCMacro.self]))

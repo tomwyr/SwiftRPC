@@ -406,3 +406,30 @@ extension IntegrationTests {
     }
   }
 }
+
+// Inline handler tests
+extension IntegrationTests {
+  @Test(arguments: runners)
+  func inlineServerHandlerRoutesClientCalls(runner: IntegrationTestRunner) async throws {
+    nonisolated(unsafe) var capturedQuery = ""
+
+    let server = MovieServiceServer(
+      handler: .inline(
+        search: { @Sendable query in
+          capturedQuery = query
+          return Movie(title: "batman", duration: 120)
+        },
+      )
+    )
+
+    try await runner.run(server) { transport in
+      let client = MovieServiceClient(transport: transport)
+
+      let result = try await client.search(query: "bat")
+
+      #expect(result.title == "batman")
+      #expect(result.duration == 120)
+      #expect(capturedQuery == "bat")
+    }
+  }
+}

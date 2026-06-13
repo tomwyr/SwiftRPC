@@ -37,3 +37,8 @@ enum ServiceError: Error {
   case profileNotFound
   case updateFailed
 }
+
+struct Movie: Codable, Equatable {
+  let title: String
+  let duration: Int
+}

@@ -16,7 +16,13 @@ protocol UserService {
   func ping() async throws -> String
   func clearCache() async throws
   func updateSettings(
-    userId: UserID, notificationsEnabled: Bool?, theme: String?, sessionTimeout: Int?
+    userId: UserID, notificationsEnabled: Bool?,
+    theme: String?, sessionTimeout: Int?,
   ) async throws -> UserSettings
   func getSettings(userId: UserID) async throws -> UserSettings?
+}
+
+@RPC(inlineHandler: true)
+protocol MovieService {
+  func search(query: String) async throws -> Movie
 }
