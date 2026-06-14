@@ -55,6 +55,7 @@ let package = Package(
             dependencies: [
                 "SwiftRPCMacros",
                 .product(name: "MacroTesting", package: "swift-macro-testing"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
             ],
         ),
         .testTarget(
