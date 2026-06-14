@@ -177,16 +177,27 @@ Throw `RPCError` when the server should return a specific RPC failure. Non-`RPCE
 
 ## Transports
 
-Use the HTTP client initializer when the service is hosted by a server:
+Use the generated `baseURL` initializer when a client calls a service over HTTP:
 
 ```swift
 let client = UserServiceClient(baseURL: URL(string: "http://localhost:8080")!)
 ```
 
-Available transports:
+On the server, use `SwiftRPCHummingbird` to register the generated server with a Hummingbird router:
 
-- `SwiftRPCHummingbird` for registering services with Hummingbird routers.
-- `InMemoryTransport` for same-process calls, such as tests or local composition.
+```swift
+import SwiftRPCHummingbird
+
+UserServiceServer(handler: UserServiceHandler()).register(on: router)
+```
+
+For tests or same-process composition, use `InMemoryTransport` with the generated server and client:
+
+```swift
+let transport = InMemoryTransport()
+UserServiceServer(handler: UserServiceHandler()).register(on: transport)
+let client = UserServiceClient(transport: transport)
+```
 
 ## Package Products
 
