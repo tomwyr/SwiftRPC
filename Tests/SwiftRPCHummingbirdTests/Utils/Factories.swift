@@ -10,5 +10,5 @@ func rpcEncode<Input: Codable>(_ input: Input) throws -> Data {
 func rpcDecode<Output: Codable>(
   _ buffer: ByteBuffer, into: Output.Type = Output.self,
 ) throws -> RPCResponse<Output> {
-  try JSONDecoder().decode(RPCResponse<Output>.self, from: buffer)
+  try JSONDecoder().decode(RPCResponse<Output>.self, from: Data(buffer.readableBytesView))
 }

@@ -13,7 +13,7 @@ extension TestClientProtocol {
       uri: uri,
       method: method,
       headers: [.contentType: "application/json"],
-      body: .init(data: body),
+      body: .init(bytes: body),
       testCallback: testCallback
     )
   }
@@ -28,7 +28,7 @@ extension TestClientProtocol {
       uri: uri,
       method: method,
       headers: [.contentType: "application/json"],
-      body: .init(string: body),
+      body: ByteBuffer(string: body),
       testCallback: testCallback
     )
   }
