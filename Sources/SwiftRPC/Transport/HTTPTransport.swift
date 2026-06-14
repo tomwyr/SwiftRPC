@@ -63,4 +63,12 @@ public protocol TransportURLSession: Sendable {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
+#if canImport(FoundationNetworking)
+extension URLSession: TransportURLSession {
+  public func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    try await data(for: request, delegate: nil)
+  }
+}
+#else
 extension URLSession: TransportURLSession {}
+#endif
