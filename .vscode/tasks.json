@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test: Linux (macOS host)",
+      "type": "shell",
+      "detail": "Runs tests on Linux through the macOS container CLI.",
+      "command": "container run --rm -it --cpus 8 --memory 8G --volume \"${workspaceFolder}:/workspace\" --volume swiftrpc-build:/build --workdir /workspace docker.io/library/swift:6.2 swift test --scratch-path /build --jobs 4 --verbose",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
