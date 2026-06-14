@@ -1,0 +1,10 @@
+# Changelog
+
+## 0.5.0
+
+- Added `@RPC` macro for defining type-safe RPC services from Swift protocols.
+- Added generated client and server entry points for annotated services.
+- Added HTTP client support through generated client initializers.
+- Added Hummingbird integration for registering RPC services on routers.
+- Added in-memory transport for same-process calls, tests, and local composition.
+- Added `RPCError` for reporting explicit RPC failures.

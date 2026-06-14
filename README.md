@@ -1,0 +1,231 @@
+# SwiftRPC
+
+<p>
+<a href="https://swift.org">
+  <img src="https://img.shields.io/badge/swift-6.2+-f05138.svg"/>
+</a>
+</p>
+
+Type-safe RPC for Swift services using protocols, macros, and async/await.
+
+Define a service once as a Swift protocol, implement it on the server, and call it from clients as typed Swift methods.
+
+## Quick Start
+
+Add SwiftRPC to your `Package.swift`:
+
+```swift
+dependencies: [
+  .package(url: "https://github.com/tomwyr/SwiftRPC.git", branch: "main"),
+],
+targets: [
+  .target(
+    dependencies: [
+      .product(name: "SwiftRPC", package: "SwiftRPC"),
+      // Add one of the available server integrations.
+      .product(name: "SwiftRPCHummingbird", package: "SwiftRPC"),
+    ]
+  ),
+]
+```
+
+Define a service protocol and annotate it with `@RPC`:
+
+```swift
+import Foundation
+import SwiftRPC
+
+@RPC
+protocol UserService {
+  func getUser(id: UUID) async throws -> User
+  func createUser(name: String) async throws -> User
+}
+
+struct User: Codable {
+  let id: UUID
+  let name: String
+}
+```
+
+Implement the service on the server:
+
+```swift
+struct UserServiceHandler: UserService {
+  func getUser(id: UUID) async throws -> User {
+    User(id: id, name: "Alice")
+  }
+
+  func createUser(name: String) async throws -> User {
+    User(id: UUID(), name: name)
+  }
+}
+```
+
+Register the service on the server using one of the supported integrations:
+
+```swift
+import SwiftRPCHummingbird
+
+UserServiceServer(handler: UserServiceHandler()).register(on: router)
+```
+
+Call the service from a client:
+
+```swift
+let client = UserServiceClient(baseURL: baseURL)
+let created = try await client.createUser(name: "Alice")
+let user = try await client.getUser(id: created.id)
+```
+
+## Why SwiftRPC?
+
+- Avoid client/server contract drift by deriving both sides from one protocol.
+- Avoid stringly typed endpoints and hand-written request wrappers.
+- Call remote operations as Swift methods with type-safe inputs and outputs, and idiomatic error handling.
+- Use regular `Codable` models instead of maintaining a separate schema file.
+- Exercise the same service contract over HTTP or in-process tests.
+
+## Core Concepts
+
+- Service: the Swift protocol annotated with `@RPC`.
+- Handler: your server-side implementation of the service.
+- Client: the type your app uses to call the service.
+- Server: the type your server uses to register the handler.
+
+## Manual API vs SwiftRPC
+
+Without SwiftRPC, the client and server usually describe the same operation separately:
+
+```swift
+// Server
+func createUser(name: String) async throws -> User {
+  User(id: UUID(), name: name)
+}
+
+router.post("/users/create") { request, context in
+  let input = try await request.decode(as: CreateUserRequest.self, context: context)
+  return try await createUser(name: input.name)
+}
+
+// Client
+var request = URLRequest(url: baseURL.appending(path: "users/create"))
+request.httpMethod = "POST"
+request.httpBody = try JSONEncoder().encode(CreateUserRequest(name: "Alice"))
+let (data, _) = try await URLSession.shared.data(for: request)
+let user = try JSONDecoder().decode(User.self, from: data)
+```
+
+With SwiftRPC, the operation is defined once and called as a Swift method:
+
+```swift
+// Shared
+@RPC
+protocol UserService {
+  func createUser(name: String) async throws -> User
+}
+
+// Server
+struct UserServiceHandler: UserService {
+  func createUser(name: String) async throws -> User {
+    User(id: UUID(), name: name)
+  }
+}
+
+// Client
+let user = try await client.createUser(name: "Alice")
+```
+
+## Supported Types
+
+Use `Codable` types for service inputs and outputs.
+
+```swift
+@RPC
+protocol SearchService {
+  func search(query: String, limit: Int?) async throws -> [SearchResult]
+  func save(result: SearchResult) async throws
+}
+```
+
+Any `Codable` type can be used as an input or output, including primitives, structs, enums, arrays, dictionaries, optionals, and `Void` returns.
+
+## Error Handling
+
+Use normal Swift error handling for service failures.
+
+```swift
+struct UserServiceHandler: UserService {
+  func getUser(id: UUID) async throws -> User {
+    guard let user = users[id] else {
+      throw RPCError(code: .notFound, message: "User not found")
+    }
+    return user
+  }
+}
+
+do {
+  let user = try await client.getUser(id: UUID())
+} catch let error as RPCError {
+  print(error.message)
+}
+```
+
+Throw `RPCError` when the server should return a specific RPC failure. Non-`RPCError` failures are converted to internal RPC failures before reaching the client.
+
+## Transports
+
+Use the HTTP client initializer when the service is hosted by a server:
+
+```swift
+let client = UserServiceClient(baseURL: URL(string: "http://localhost:8080")!)
+```
+
+Available transports:
+
+- `SwiftRPCHummingbird` for registering services with Hummingbird routers.
+- `InMemoryTransport` for same-process calls, such as tests or local composition.
+
+## Package Products
+
+| Product               | Purpose                                                                      |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `SwiftRPC`            | Service contracts, typed clients and servers, HTTP clients, and local calls. |
+| `SwiftRPCHummingbird` | Hummingbird registration support for SwiftRPC services.                      |
+
+## Examples
+
+The package includes an executable target with server and client examples:
+
+```sh
+swift run SwiftRPCExamples server
+swift run SwiftRPCExamples client
+```
+
+Source:
+
+- [Service definition](Sources/SwiftRPCExamples/AppService.swift)
+- [Service handler](Sources/SwiftRPCExamples/AppServiceHandler.swift)
+- [Server example](Sources/SwiftRPCExamples/ServerExample.swift)
+- [Client example](Sources/SwiftRPCExamples/ClientExample.swift)
+
+For same-process usage, run:
+
+```sh
+swift run SwiftRPCExamples in-memory
+```
+
+Source:
+
+- [In-memory example](Sources/SwiftRPCExamples/InMemoryApp.swift)
+
+## Status
+
+SwiftRPC is early-stage. The API may change as the package evolves.
+
+## Contributing
+
+Found a bug or have a suggested change? Open an issue with the behavior you saw, what you expected, and any small example that helps reproduce or explain it.
+
+## License
+
+SwiftRPC is available under the MIT license.
