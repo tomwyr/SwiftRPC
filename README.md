@@ -13,6 +13,9 @@ Type-safe RPC for Swift services using protocols, macros, and async/await.
 
 Define a service once as a Swift protocol, implement it on the server, and call it from clients as typed Swift methods.
 
+> [!NOTE]
+> SwiftRPC is early-stage, and the API may change as the package evolves.
+
 ## Quick Start
 
 Add SwiftRPC to your `Package.swift`:
@@ -249,10 +252,6 @@ swift run SwiftRPCExamples in-memory
 Source:
 
 - [In-memory example](Sources/SwiftRPCExamples/InMemoryApp.swift)
-
-## Status
-
-SwiftRPC is early-stage. The API may change as the package evolves.
 
 ## Contributing
 
