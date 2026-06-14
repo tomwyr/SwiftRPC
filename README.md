@@ -4,6 +4,9 @@
 <a href="https://swift.org">
   <img src="https://img.shields.io/badge/swift-6.2+-f05138.svg"/>
 </a>
+<a href="https://github.com/tomwyr/SwiftRPC/actions/workflows/tests.yml">
+  <img src="https://github.com/tomwyr/SwiftRPC/actions/workflows/tests.yml/badge.svg?branch=main"/>
+</a>
 </p>
 
 Type-safe RPC for Swift services using protocols, macros, and async/await.

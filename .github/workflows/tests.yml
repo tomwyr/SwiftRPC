@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Swift test
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/.cache/org.swift.swiftpm
+            ~/.swiftpm
+          key: ${{ runner.os }}-swift-6.2-${{ hashFiles('Package.resolved', '.github/workflows/tests.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-swift-6.2-
+
+      - name: Run tests
+        run: swift test
