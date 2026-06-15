@@ -10,17 +10,16 @@ extension RPCMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    let config = RPCMacroConfig(from: node)
-
-    guard config.inlineHandler else {
+    // Ignore invalid config because the peer expansion already reports diagnostics.
+    guard let config = try? RPCMacroConfig(from: node), config.inlineHandler else {
       return []
     }
 
     let proto = try protocolInfo(from: node, attachedTo: declaration)
 
-    let factoryDecl = try makeInlineServerHandlerFactory(proto: proto)
-
-    return [factoryDecl]
+    return [
+      try makeInlineServerHandlerFactory(proto: proto)
+    ]
   }
 
   private static func makeInlineServerHandlerFactory(

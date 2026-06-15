@@ -195,6 +195,346 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func variadicParameterArityRejectedAboveMax() {
+    assertMacro {
+      """
+      @RPC(varargMaxArity: 2)
+      protocol LogService {
+        func collect(prefix: String, messages: String...) async throws -> [String]
+      }
+      """
+    } expansion: {
+      """
+      protocol LogService {
+        func collect(prefix: String, messages: String...) async throws -> [String]
+      }
+
+      private struct LogServiceInputs {
+        struct Collect: Codable {
+          let prefix: String
+          let messages: [String]
+        }
+      }
+
+      private struct LogServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct LogServiceClient: LogService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func collect(prefix: String, messages: String...) async throws -> [String] {
+          let input = LogServiceInputs.Collect(prefix: prefix, messages: messages)
+          return try await transport.send(
+            route: "/collect",
+            input: input,
+            outputType: [String].self,
+          )
+        }
+      }
+
+      struct LogServiceServer<Handler: LogService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "collect") { (input: LogServiceInputs.Collect) in
+            switch input.messages.count {
+              case 0:
+                return try await self.handler.collect(prefix: input.prefix)
+              case 1:
+                return try await self.handler.collect(prefix: input.prefix, messages: input.messages[0])
+              case 2:
+                return try await self.handler.collect(prefix: input.prefix, messages: input.messages[0], input.messages[1])
+              default:
+                throw RPCError(
+                  code: .badRequest,
+                  message: "Variadic parameter 'messages' exceeds the maximum of 2 arguments",
+                )
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func variadicParameterArityTruncatedAboveMax() {
+    assertMacro {
+      """
+      @RPC(varargMaxArity: 2, varargOverflowBehavior: .truncate)
+      protocol LogService {
+        func collect(messages: String...) async throws -> [String]
+      }
+      """
+    } expansion: {
+      """
+      protocol LogService {
+        func collect(messages: String...) async throws -> [String]
+      }
+
+      private struct LogServiceInputs {
+        struct Collect: Codable {
+          let messages: [String]
+        }
+      }
+
+      private struct LogServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct LogServiceClient: LogService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func collect(messages: String...) async throws -> [String] {
+          let input = LogServiceInputs.Collect(messages: messages)
+          return try await transport.send(
+            route: "/collect",
+            input: input,
+            outputType: [String].self,
+          )
+        }
+      }
+
+      struct LogServiceServer<Handler: LogService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "collect") { (input: LogServiceInputs.Collect) in
+            switch input.messages.count {
+              case 0:
+                return try await self.handler.collect()
+              case 1:
+                return try await self.handler.collect(messages: input.messages[0])
+              case 2:
+                return try await self.handler.collect(messages: input.messages[0], input.messages[1])
+              default:
+                return try await self.handler.collect(messages: input.messages[0], input.messages[1])
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func variadicParameterUsesDefaultMaxArity() {
+    assertMacro {
+      """
+      @RPC
+      protocol LogService {
+        func count(messages: String...) async throws -> Int
+      }
+      """
+    } expansion: {
+      """
+      protocol LogService {
+        func count(messages: String...) async throws -> Int
+      }
+
+      private struct LogServiceInputs {
+        struct Count: Codable {
+          let messages: [String]
+        }
+      }
+
+      private struct LogServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct LogServiceClient: LogService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func count(messages: String...) async throws -> Int {
+          let input = LogServiceInputs.Count(messages: messages)
+          return try await transport.send(
+            route: "/count",
+            input: input,
+            outputType: Int.self,
+          )
+        }
+      }
+
+      struct LogServiceServer<Handler: LogService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "count") { (input: LogServiceInputs.Count) in
+            switch input.messages.count {
+              case 0:
+                return try await self.handler.count()
+              case 1:
+                return try await self.handler.count(messages: input.messages[0])
+              case 2:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1])
+              case 3:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2])
+              case 4:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3])
+              case 5:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3], input.messages[4])
+              case 6:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3], input.messages[4], input.messages[5])
+              case 7:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3], input.messages[4], input.messages[5], input.messages[6])
+              case 8:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3], input.messages[4], input.messages[5], input.messages[6], input.messages[7])
+              case 9:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3], input.messages[4], input.messages[5], input.messages[6], input.messages[7], input.messages[8])
+              case 10:
+                return try await self.handler.count(messages: input.messages[0], input.messages[1], input.messages[2], input.messages[3], input.messages[4], input.messages[5], input.messages[6], input.messages[7], input.messages[8], input.messages[9])
+              default:
+                throw RPCError(
+                  code: .badRequest,
+                  message: "Variadic parameter 'messages' exceeds the maximum of 10 arguments",
+                )
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func variadicParameterInlineHandlerExpansion() {
+    assertMacro {
+      """
+      @RPC(inlineHandler: true, varargMaxArity: 1)
+      protocol LogService {
+        func collect(messages: String...) async throws -> [String]
+      }
+      """
+    } expansion: {
+      """
+      protocol LogService {
+        func collect(messages: String...) async throws -> [String]
+      }
+
+      private struct LogServiceInputs {
+        struct Collect: Codable {
+          let messages: [String]
+        }
+      }
+
+      private struct LogServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct LogServiceClient: LogService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func collect(messages: String...) async throws -> [String] {
+          let input = LogServiceInputs.Collect(messages: messages)
+          return try await transport.send(
+            route: "/collect",
+            input: input,
+            outputType: [String].self,
+          )
+        }
+      }
+
+      struct LogServiceServer<Handler: LogService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "collect") { (input: LogServiceInputs.Collect) in
+            switch input.messages.count {
+              case 0:
+                return try await self.handler.collect()
+              case 1:
+                return try await self.handler.collect(messages: input.messages[0])
+              default:
+                throw RPCError(
+                  code: .badRequest,
+                  message: "Variadic parameter 'messages' exceeds the maximum of 1 arguments",
+                )
+            }
+          }
+        }
+      }
+
+      struct LogServiceInlineServerHandler: LogService, Sendable {
+        var collectHandler: @Sendable (String...) async throws -> [String]
+
+        func collect(messages: String...) async throws -> [String] {
+          switch messages.count {
+            case 0:
+              return try await collectHandler()
+            case 1:
+              return try await collectHandler(messages[0])
+            default:
+              throw RPCError(
+                code: .badRequest,
+                message: "Variadic parameter 'messages' exceeds the maximum of 1 arguments",
+              )
+          }
+        }
+      }
+
+      extension LogService where Self == LogServiceInlineServerHandler {
+        static func inline(
+          collect: @escaping @Sendable (String...) async throws -> [String],
+        ) -> LogServiceInlineServerHandler {
+          LogServiceInlineServerHandler(
+            collectHandler: collect,
+          )
+        }
+      }
+      """
+    }
+  }
+
   @Test func noReturnTypeDefaultsToVoid() {
     assertMacro {
       """
@@ -1510,10 +1850,6 @@ struct RPCMacroDiagnosticsTests {
       ╰─ 🛑 @RPC can only be applied to a protocol
       struct NotAProtocol {}
       """
-    } expansion: {
-      """
-
-      """
     }
   }
 
@@ -1667,7 +2003,6 @@ struct RPCMacroDiagnosticsTests {
       @RPC
       protocol BadService {
         func update(value: inout String) async throws
-        func log(values: String...) async throws
         func callback(handler: () -> Void) async throws
       }
       """
@@ -1678,12 +2013,89 @@ struct RPCMacroDiagnosticsTests {
         func update(value: inout String) async throws
                            ┬───────────
                            ╰─ 🛑 @RPC: parameter 'value' must not be inout
-        func log(values: String...) async throws
-                               ┬──
-                               ╰─ 🛑 @RPC: parameter 'values' must not be variadic
         func callback(handler: () -> Void) async throws
                                ┬─────────
                                ╰─ 🛑 @RPC: parameter 'handler' must use a Codable-compatible type
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnVarargMaxArityBelowMinimum() {
+    assertMacro {
+      """
+      @RPC(varargMaxArity: 0)
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC(varargMaxArity: 0)
+                           ┬
+                           ╰─ 🛑 @RPC: 'varargMaxArity' must be an integer literal in the range 1...32
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnVarargMaxArityAboveMaximum() {
+    assertMacro {
+      """
+      @RPC(varargMaxArity: 33)
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC(varargMaxArity: 33)
+                           ┬─
+                           ╰─ 🛑 @RPC: 'varargMaxArity' must be an integer literal in the range 1...32
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnNonLiteralVarargMaxArity() {
+    assertMacro {
+      """
+      @RPC(varargMaxArity: maxArity)
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC(varargMaxArity: maxArity)
+                           ┬───────
+                           ╰─ 🛑 @RPC: 'varargMaxArity' must be an integer literal in the range 1...32
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnInvalidVarargOverflowBehavior() {
+    assertMacro {
+      """
+      @RPC(varargOverflowBehavior: .drop)
+      protocol BadService {
+        func log(values: String...) async throws
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC(varargOverflowBehavior: .drop)
+                                   ┬────
+                                   ╰─ 🛑 @RPC: 'varargOverflowBehavior' must be '.reject' or '.truncate'
+      protocol BadService {
+        func log(values: String...) async throws
       }
       """
     }

@@ -9,7 +9,8 @@ enum RPCMacroError: Error, CustomStringConvertible {
   case methodMustBeAsyncThrows(name: String)
   case parameterTypeMustBeCodable(name: String)
   case returnTypeMustBeCodable(name: String)
-  case variadicParameter(name: String)
+  case invalidVarargMaxArity(max: Int)
+  case invalidVarargOverflowBehavior
 
   var description: String {
     switch self {
@@ -29,8 +30,10 @@ enum RPCMacroError: Error, CustomStringConvertible {
       "@RPC: parameter '\(name)' must use a Codable-compatible type"
     case .returnTypeMustBeCodable(let name):
       "@RPC: return type of '\(name)' must be Codable-compatible"
-    case .variadicParameter(let name):
-      "@RPC: parameter '\(name)' must not be variadic"
+    case .invalidVarargMaxArity(let max):
+      "@RPC: 'varargMaxArity' must be an integer literal in the range 1...\(max)"
+    case .invalidVarargOverflowBehavior:
+      "@RPC: 'varargOverflowBehavior' must be '.reject' or '.truncate'"
     }
   }
 }

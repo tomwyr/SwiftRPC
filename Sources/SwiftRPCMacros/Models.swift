@@ -1,9 +1,13 @@
 import SwiftSyntax
 
 struct RPCMacroConfig {
-  var inlineHandler = false
+  static let absoluteVarargMaxArity = 32
 
-  init(from node: AttributeSyntax) {
+  var inlineHandler = false
+  var varargMaxArity = 10
+  var varargOverflowBehavior = RPCVarargOverflowBehavior.reject
+
+  init(from node: AttributeSyntax) throws {
     guard case .argumentList(let args) = node.arguments else {
       return
     }
@@ -13,11 +17,38 @@ struct RPCMacroConfig {
       case "inlineHandler":
         let boolArg = arg.expression.as(BooleanLiteralExprSyntax.self)
         inlineHandler = boolArg?.literal.text == "true"
+      case "varargMaxArity":
+        guard
+          let value = Int(arg.expression.trimmedDescription),
+          1...Self.absoluteVarargMaxArity ~= value
+        else {
+          try throwDiagnostics(
+            node: arg.expression,
+            message: .invalidVarargMaxArity(max: Self.absoluteVarargMaxArity),
+          )
+          continue
+        }
+        varargMaxArity = value
+      case "varargOverflowBehavior":
+        switch arg.expression.trimmedDescription {
+        case ".reject", "RPCVarargOverflowBehavior.reject":
+          varargOverflowBehavior = .reject
+        case ".truncate", "RPCVarargOverflowBehavior.truncate":
+          varargOverflowBehavior = .truncate
+        default:
+          try throwDiagnostics(node: arg.expression, message: .invalidVarargOverflowBehavior)
+          continue
+        }
       default:
         continue
       }
     }
   }
+}
+
+enum RPCVarargOverflowBehavior {
+  case reject
+  case truncate
 }
 
 struct RPCProtocolInfo {
@@ -61,19 +92,14 @@ enum RPCAccessLevel: String {
 
 struct RPCMethod {
   let name: String
-  let params: [(label: String, name: String, type: String)]
+  let params: [RPCParameter]
   let returnType: String
   let isVoidReturn: Bool
 
   init(from fn: FunctionDeclSyntax) {
     name = fn.name.text
 
-    params = fn.signature.parameterClause.parameters.map { param in
-      let label = param.firstName.text
-      let name = param.secondName?.text ?? label
-      let type = param.type.trimmedDescription
-      return (label: label, name: name, type: type)
-    }
+    params = fn.signature.parameterClause.parameters.map(RPCParameter.init)
 
     let returnClause = fn.signature.returnClause
     returnType = returnClause?.type.trimmedDescription ?? "Void"
@@ -95,7 +121,61 @@ struct RPCMethod {
 
   /// The inline handler closure parameter type list, e.g. `(String, Int)`
   var closureParameterTypes: String {
-    let types = params.map(\.type).joined(separator: ", ")
+    let types = params.map(\.methodType).joined(separator: ", ")
     return "(\(types))"
+  }
+
+  /// The first variadic parameter, if this method declares one.
+  var variadicParam: RPCParameter? {
+    params.first(where: \.isVariadic)
+  }
+}
+
+struct RPCParameter {
+  let label: String
+  let name: String
+  let elementType: String
+  let isVariadic: Bool
+
+  init(from param: FunctionParameterSyntax) {
+    label = param.firstName.text
+    name = param.secondName?.text ?? label
+    elementType = param.type.trimmedDescription
+    isVariadic = param.ellipsis != nil
+  }
+
+  /// The generated method parameter type, preserving variadic syntax.
+  var methodType: String {
+    isVariadic ? "\(elementType)..." : elementType
+  }
+
+  /// The input payload field type, e.g. `String...` becomes `[String]`.
+  var payloadType: String {
+    isVariadic ? "[\(elementType)]" : elementType
+  }
+
+  /// The generated method parameter declaration, preserving external and local labels.
+  var signatureFragment: String {
+    if label == "_" {
+      "_ \(name): \(methodType)"
+    } else if label != name {
+      "\(label) \(name): \(methodType)"
+    } else {
+      "\(label): \(methodType)"
+    }
+  }
+
+  /// A generated call argument using this parameter's external label.
+  func callArgument(value: String) -> String {
+    if label == "_" {
+      value
+    } else {
+      "\(label): \(value)"
+    }
+  }
+
+  /// Generated inline closure variadic arguments for a fixed arity.
+  func closureVariadicArguments(arity: Int) -> [String] {
+    (0..<arity).map { "\(name)[\($0)]" }
   }
 }

@@ -7,19 +7,20 @@ extension RPCMacro: PeerMacro {
     providingPeersOf declaration: some DeclSyntaxProtocol,
     in context: some MacroExpansionContext,
   ) throws -> [DeclSyntax] {
-    let config = RPCMacroConfig(from: node)
+    let config = try RPCMacroConfig(from: node)
     let proto = try protocolInfo(from: node, attachedTo: declaration)
 
-    let inputsDecl = try makeInputTypes(proto: proto)
-    let outputsDecl = try makeOutputTypes(proto: proto)
-    let clientDecl = try makeClient(proto: proto)
-    let serverDecl = try makeServer(proto: proto)
-
-    var declarations = [inputsDecl, outputsDecl, clientDecl, serverDecl]
+    var declarations = [
+      try makeInputTypes(proto: proto),
+      try makeOutputTypes(proto: proto),
+      try makeClient(proto: proto),
+      try makeServer(proto: proto, config: config),
+    ]
 
     if config.inlineHandler {
-      let handlerDecl = try makeInlineServerHandler(proto: proto)
-      declarations.append(handlerDecl)
+      declarations.append(
+        try makeInlineHandler(proto: proto, config: config),
+      )
     }
 
     return declarations
@@ -41,7 +42,7 @@ extension RPCMacro: PeerMacro {
         )
       } else {
         let fields = method.params
-          .map { "  let \($0.name): \($0.type)" }
+          .map { "  let \($0.name): \($0.payloadType)" }
           .joined(separator: "\n")
 
         memberDecls.append(
@@ -86,7 +87,7 @@ extension RPCMacro: PeerMacro {
       let inputTypeName = "\(inputsName).\(method.inputTypeName)"
 
       let paramList = method.params
-        .map { "\($0.label): \($0.type)" }
+        .map(\.signatureFragment)
         .joined(separator: ", ")
       let inputInit = method.params
         .map { "\($0.name): \($0.name)" }
@@ -142,7 +143,10 @@ extension RPCMacro: PeerMacro {
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeServer(proto: RPCProtocolInfo) throws -> DeclSyntax {
+  private static func makeServer(
+    proto: RPCProtocolInfo,
+    config: RPCMacroConfig,
+  ) throws -> DeclSyntax {
     let protoName = proto.name
     let serverName = "\(protoName)Server"
     let inputsName = "\(protoName)Inputs"
@@ -152,19 +156,16 @@ extension RPCMacro: PeerMacro {
     var methodRegistrations = [String]()
 
     for method in proto.methods {
-      // Argument forwarding: handler.getUser(id: input.id, ...)
-      let callArgs = method.params
-        .map { "\($0.label): input.\($0.name)" }
-        .joined(separator: ", ")
-
       let handlerCall =
-        if method.isVoidReturn {
-          """
-          try await self.handler.\(method.name)(\(callArgs))
-          return \(outputsName).Nothing()
-          """
+        if let variadicParam = method.variadicParam {
+          makeVariadicHandlerCall(
+            method: method,
+            variadicParam: variadicParam,
+            outputsName: outputsName,
+            config: config,
+          )
         } else {
-          "try await self.handler.\(method.name)(\(callArgs))"
+          makeHandlerCall(method: method, outputsName: outputsName)
         }
 
       let registration = """
@@ -194,7 +195,126 @@ extension RPCMacro: PeerMacro {
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeInlineServerHandler(proto: RPCProtocolInfo) throws -> DeclSyntax {
+  private static func makeVariadicHandlerCall(
+    method: RPCMethod,
+    variadicParam: RPCParameter,
+    outputsName: String,
+    config: RPCMacroConfig,
+  ) -> String {
+    let cases = (0...config.varargMaxArity).map { arity in
+      """
+      case \(arity):
+      \(makeHandlerCallSource(
+        method: method,
+        outputsName: outputsName,
+        callArgs: getVariadicCallArgs(
+          method: method,
+          variadicParam: variadicParam, variadicArity: arity,
+        ),
+        explicitReturn: true,
+      ).indented())
+      """
+    }.joined(separator: "\n")
+
+    let defaultCase =
+      switch config.varargOverflowBehavior {
+      case .reject:
+        """
+        default:
+          throw RPCError(
+            code: .badRequest,
+            message: "Variadic parameter '\(variadicParam.name)' exceeds the maximum of \(config.varargMaxArity) arguments",
+          )
+        """
+      case .truncate:
+        """
+        default:
+        \(makeHandlerCallSource(
+          method: method,
+          outputsName: outputsName,
+          callArgs: getVariadicCallArgs(
+            method: method, 
+            variadicParam: variadicParam, variadicArity: config.varargMaxArity,
+          ),
+          explicitReturn: true,
+        ).indented())
+        """
+      }
+
+    return """
+      switch input.\(variadicParam.name).count {
+      \(cases.indented())
+      \(defaultCase.indented())
+      }
+      """
+  }
+
+  private static func getVariadicCallArgs(
+    method: RPCMethod,
+    variadicParam: RPCParameter,
+    variadicArity: Int,
+  ) -> String {
+    method.params.flatMap { param in
+      if param.name == variadicParam.name {
+        makeCallVariadicArguments(for: param, arity: variadicArity)
+      } else {
+        [param.callArgument(value: "input.\(param.name)")]
+      }
+    }.joined(separator: ", ")
+  }
+
+  private static func makeCallVariadicArguments(
+    for param: RPCParameter, arity: Int,
+  ) -> [String] {
+    (0..<arity).map { index in
+      let value = "input.\(param.name)[\(index)]"
+      if index == 0 {
+        return param.callArgument(value: value)
+      }
+      return value
+    }
+  }
+
+  private static func makeHandlerCall(
+    method: RPCMethod,
+    outputsName: String,
+    explicitReturn: Bool = false,
+  ) -> String {
+    let callArgs = method.params
+      .map { param in param.callArgument(value: "input.\(param.name)") }
+      .joined(separator: ", ")
+
+    return makeHandlerCallSource(
+      method: method,
+      outputsName: outputsName,
+      callArgs: callArgs,
+      explicitReturn: explicitReturn,
+    )
+  }
+
+  private static func makeHandlerCallSource(
+    method: RPCMethod,
+    outputsName: String,
+    callArgs: String,
+    explicitReturn: Bool,
+  ) -> String {
+    let call = "try await self.handler.\(method.name)(\(callArgs))"
+
+    if method.isVoidReturn {
+      return """
+        \(call)
+        return \(outputsName).Nothing()
+        """
+    }
+
+    let returnPrefix = explicitReturn ? "return " : ""
+    return "\(returnPrefix)\(call)"
+  }
+
+  private static func makeInlineHandler(
+    proto: RPCProtocolInfo,
+    config: RPCMacroConfig,
+  ) throws -> DeclSyntax {
     let protoName = proto.name
     let handlerName = "\(protoName)InlineServerHandler"
     let access = proto.access.declarationPrefix
@@ -207,45 +327,158 @@ extension RPCMacro: PeerMacro {
 
     let methodDecls =
       proto.methods
-      .map { makeInlineServerHandlerMethod(method: $0, access: proto.access) }
+      .map { makeInlineHandlerMethod(method: $0, access: proto.access, config: config) }
       .joined(separator: "\n\n")
 
-    let structMembers = [propertyDecls, methodDecls]
+    let allMembers = [propertyDecls, methodDecls]
       .filter { !$0.isEmpty }
       .joined(separator: "\n\n")
 
     let source = """
       \(access)struct \(handlerName): \(protoName), Sendable {
-      \(structMembers)
+      \(allMembers)
       }
       """
 
     return DeclSyntax(stringLiteral: source)
   }
 
-  private static func makeInlineServerHandlerMethod(
+  private static func makeInlineHandlerMethod(
     method: RPCMethod,
     access: RPCAccessLevel,
+    config: RPCMacroConfig,
   ) -> String {
     let access = access.declarationPrefix
-    let signatureParams = method.params.map { param in
-      if param.label == "_" {
-        "_ \(param.name): \(param.type)"
-      } else if param.label != param.name {
-        "\(param.label) \(param.name): \(param.type)"
-      } else {
-        "\(param.label): \(param.type)"
-      }
-    }
-    .joined(separator: ", ")
+    let signatureParams = method.params.map(\.signatureFragment).joined(separator: ", ")
 
     let returnType = method.isVoidReturn ? "" : " -> \(method.returnType)"
-    let forwardedArgs = method.params.map(\.name).joined(separator: ", ")
+    let body =
+      if let variadicParam = method.variadicParam {
+        makeVariadicInlineHandlerCall(
+          method: method,
+          variadicParam: variadicParam,
+          config: config,
+        )
+      } else {
+        makeInlineHandlerCall(method: method)
+      }
 
     return """
       \(access)func \(method.name)(\(signatureParams)) async throws\(returnType) {
-        try await \(method.handlerPropertyName)(\(forwardedArgs))
+      \(body.indented())
       }
       """
+  }
+
+  private static func makeVariadicInlineHandlerCall(
+    method: RPCMethod,
+    variadicParam: RPCParameter,
+    config: RPCMacroConfig,
+  ) -> String {
+    let cases = (0...config.varargMaxArity).map { arity in
+      """
+      case \(arity):
+      \(makeVariadicInlineHandlerCall(
+        method: method,
+        variadicParam: variadicParam,
+        variadicArity: arity,
+        explicitReturn: true
+      ).indented())
+      """
+    }.joined(separator: "\n")
+
+    let defaultCase =
+      switch config.varargOverflowBehavior {
+      case .reject:
+        """
+        default:
+          throw RPCError(
+            code: .badRequest,
+            message: "Variadic parameter '\(variadicParam.name)' exceeds the maximum of \(config.varargMaxArity) arguments",
+          )
+        """
+      case .truncate:
+        """
+        default:
+        \(makeVariadicInlineHandlerCall(
+          method: method,
+          variadicParam: variadicParam,
+          variadicArity: config.varargMaxArity,
+          explicitReturn: true
+        ).indented())
+        """
+      }
+
+    return """
+      switch \(variadicParam.name).count {
+      \(cases.indented())
+      \(defaultCase.indented())
+      }
+      """
+  }
+
+  private static func makeInlineHandlerCall(
+    method: RPCMethod,
+    explicitReturn: Bool = false,
+  ) -> String {
+    let forwardedArgs = method.params
+      .map(\.name)
+      .joined(separator: ", ")
+
+    return makeInlineHandlerCallSource(
+      method: method,
+      forwardedArgs: forwardedArgs,
+      explicitReturn: explicitReturn,
+    )
+  }
+
+  private static func makeVariadicInlineHandlerCall(
+    method: RPCMethod,
+    variadicParam: RPCParameter,
+    variadicArity: Int,
+    explicitReturn: Bool,
+  ) -> String {
+    let forwardedArgs = method.params.flatMap { param in
+      if param.name == variadicParam.name {
+        param.closureVariadicArguments(arity: variadicArity)
+      } else {
+        [param.name]
+      }
+    }.joined(separator: ", ")
+
+    return makeInlineHandlerCallSource(
+      method: method,
+      forwardedArgs: forwardedArgs,
+      explicitReturn: explicitReturn,
+    )
+  }
+
+  private static func makeInlineHandlerCallSource(
+    method: RPCMethod,
+    forwardedArgs: String,
+    explicitReturn: Bool,
+  ) -> String {
+    let call = "try await \(method.handlerPropertyName)(\(forwardedArgs))"
+
+    if method.isVoidReturn {
+      return call
+    }
+
+    let returnPrefix = explicitReturn ? "return " : ""
+    return "\(returnPrefix)\(call)"
+  }
+
+  private static func getInlineVariadicCallArgs(
+    method: RPCMethod,
+    variadicParam: RPCParameter,
+    variadicArity: Int,
+  ) -> String {
+    method.params.flatMap { param in
+      if param.name == variadicParam.name {
+        param.closureVariadicArguments(arity: variadicArity)
+      } else {
+        [param.name]
+      }
+    }.joined(separator: ", ")
   }
 }

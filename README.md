@@ -156,6 +156,35 @@ protocol SearchService {
 
 Any `Codable` type can be used as an input or output, including primitives, structs, enums, arrays, dictionaries, optionals, and `Void` returns.
 
+### Variadic Arguments
+
+Variadic parameters are supported when the element type is `Codable`.
+
+```swift
+@RPC
+protocol LogService {
+  func log(messages: String...) async throws
+}
+```
+
+By default, generated servers accept up to 10 values for each variadic parameter. Configure the limit per service with `varargMaxArity`, up to 32:
+
+```swift
+@RPC(varargMaxArity: 32)
+protocol LogService {
+  func log(messages: String...) async throws
+}
+```
+
+Calls above the configured limit are rejected by default. To keep only the first `varargMaxArity` values, opt in to truncation:
+
+```swift
+@RPC(varargMaxArity: 10, varargOverflowBehavior: .truncate)
+protocol LogService {
+  func log(messages: String...) async throws
+}
+```
+
 ## Error Handling
 
 Use normal Swift error handling for service failures.
@@ -219,6 +248,10 @@ UserServiceServer(
   }
 )
 ```
+
+## Known Limitations
+
+- Variadic RPC parameters have a generated server arity limit due to Swift not being able to expand arrays into variadic calls. The default is 10 arguments, and the maximum configurable value is 32. See [Variadic Arguments](#variadic-arguments) for usage details.
 
 ## Package Products
 

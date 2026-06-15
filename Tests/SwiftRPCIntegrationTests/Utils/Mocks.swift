@@ -178,3 +178,36 @@ class MockEchoService: EchoService, @unchecked Sendable {
     return result
   }
 }
+
+class MockLogService: LogService, @unchecked Sendable {
+  var collectCalls = 0
+  var collectedPrefixes = [String]()
+  var collectedMessages = [[String]]()
+
+  func collect(prefix: String, messages: String...) async throws -> [String] {
+    collectCalls += 1
+    collectedPrefixes.append(prefix)
+    collectedMessages.append(messages)
+    return [prefix] + messages
+  }
+}
+
+class MockTruncatingLogService: TruncatingLogService, @unchecked Sendable {
+  var collectCalls = 0
+  var collectedMessages = [[String]]()
+
+  func collect(messages: String...) async throws -> [String] {
+    collectCalls += 1
+    collectedMessages.append(messages)
+    return messages
+  }
+}
+
+class MockMaxArityLogService: MaxArityLogService, @unchecked Sendable {
+  var counts = [Int]()
+
+  func count(messages: String...) async throws -> Int {
+    counts.append(messages.count)
+    return messages.count
+  }
+}

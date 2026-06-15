@@ -421,6 +421,115 @@ extension IntegrationTests {
   }
 }
 
+// Variadic parameter tests
+extension IntegrationTests {
+  @Test(arguments: runners)
+  func variadicParametersRouteZeroOneAndMultipleValues(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockLogService()
+    let server = LogServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = LogServiceClient(transport: transport)
+
+      let empty = try await client.collect(prefix: "empty")
+      let single = try await client.collect(prefix: "single", messages: "one")
+      let multiple = try await client.collect(prefix: "multiple", messages: "one", "two", "three")
+
+      #expect(empty == ["empty"])
+      #expect(single == ["single", "one"])
+      #expect(multiple == ["multiple", "one", "two", "three"])
+      #expect(handler.collectCalls == 3)
+      #expect(handler.collectedPrefixes == ["empty", "single", "multiple"])
+      #expect(handler.collectedMessages == [[], ["one"], ["one", "two", "three"]])
+    }
+  }
+
+  @Test(arguments: runners)
+  func variadicParametersRejectValuesAboveMaxArity(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockLogService()
+    let server = LogServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = LogServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCError.self) {
+        try await client.collect(prefix: "overflow", messages: "one", "two", "three", "four")
+      }
+
+      #expect(error?.code == .badRequest)
+      #expect(handler.collectCalls == 0)
+    }
+  }
+
+  @Test(arguments: runners)
+  func variadicParametersCanTruncateValuesAboveMaxArity(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockTruncatingLogService()
+    let server = TruncatingLogServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = TruncatingLogServiceClient(transport: transport)
+
+      let result = try await client.collect(messages: "one", "two", "three", "four")
+
+      #expect(result == ["one", "two"])
+      #expect(handler.collectCalls == 1)
+      #expect(handler.collectedMessages == [["one", "two"]])
+    }
+  }
+
+  @Test(arguments: runners)
+  func variadicParametersSupportAbsoluteMaximumArity(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockMaxArityLogService()
+    let server = MaxArityLogServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = MaxArityLogServiceClient(transport: transport)
+
+      let result = try await client.count(
+        messages:
+          "1", "2", "3", "4", "5", "6", "7", "8",
+        "9", "10", "11", "12", "13", "14", "15", "16",
+        "17", "18", "19", "20", "21", "22", "23", "24",
+        "25", "26", "27", "28", "29", "30", "31", "32",
+      )
+
+      #expect(result == 32)
+      #expect(handler.counts == [32])
+    }
+  }
+
+  @Test(arguments: runners)
+  func variadicParametersWithInlineHandler(runner: IntegrationTestRunner) async throws {
+    nonisolated(unsafe) var capturedMessages = [String]()
+
+    let server = InlineLogServiceServer(
+      handler: .inline(
+        collect: { @Sendable (messages: String...) async throws -> [String] in
+          capturedMessages = messages
+          return messages
+        },
+      )
+    )
+
+    try await runner.run(server) { transport in
+      let client = InlineLogServiceClient(transport: transport)
+
+      let result = try await client.collect(messages: "one", "two")
+
+      #expect(result == ["one", "two"])
+      #expect(capturedMessages == ["one", "two"])
+    }
+  }
+}
+
 // Type conformance tests
 extension IntegrationTests {
   @Test(arguments: runners)

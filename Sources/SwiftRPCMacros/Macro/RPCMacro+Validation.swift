@@ -75,13 +75,6 @@ extension RPCMacro {
         )
       }
 
-      if let ellipsis = param.ellipsis {
-        diagnostics.appendDiagnostic(
-          node: ellipsis,
-          message: .variadicParameter(name: param.localName),
-        )
-      }
-
       validateCodableType(
         param.type,
         message: .parameterTypeMustBeCodable(name: param.localName),

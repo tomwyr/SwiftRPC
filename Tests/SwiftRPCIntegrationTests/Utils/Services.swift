@@ -30,3 +30,23 @@ protocol EchoService {
 protocol MovieService {
   func search(query: String) async throws -> Movie
 }
+
+@RPC(varargMaxArity: 3)
+protocol LogService {
+  func collect(prefix: String, messages: String...) async throws -> [String]
+}
+
+@RPC(varargMaxArity: 2, varargOverflowBehavior: .truncate)
+protocol TruncatingLogService {
+  func collect(messages: String...) async throws -> [String]
+}
+
+@RPC(inlineHandler: true, varargMaxArity: 2)
+protocol InlineLogService {
+  func collect(messages: String...) async throws -> [String]
+}
+
+@RPC(varargMaxArity: 32)
+protocol MaxArityLogService {
+  func count(messages: String...) async throws -> Int
+}
