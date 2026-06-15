@@ -68,13 +68,6 @@ extension RPCMacro {
     }
 
     for param in fn.signature.parameterClause.parameters {
-      if param.isInOut {
-        diagnostics.appendDiagnostic(
-          node: param.type,
-          message: .inOutParameter(name: param.localName),
-        )
-      }
-
       validateCodableType(
         param.type,
         message: .parameterTypeMustBeCodable(name: param.localName),

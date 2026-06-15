@@ -421,6 +421,110 @@ extension IntegrationTests {
   }
 }
 
+// Inout parameter tests
+extension IntegrationTests {
+  @Test(arguments: runners)
+  func inOutParameterMutatesCallerOnSuccess(runner: IntegrationTestRunner) async throws {
+    let handler = MockInOutService()
+    let server = InOutServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = InOutServiceClient(transport: transport)
+      var name = "  Alice  "
+
+      let result = try await client.normalize(name: &name)
+
+      #expect(result == true)
+      #expect(name == "Alice")
+      #expect(handler.normalizedNames == ["Alice"])
+    }
+  }
+
+  @Test(arguments: runners)
+  func multipleInOutParametersMutateCallerOnVoidReturn(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockInOutService()
+    let server = InOutServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = InOutServiceClient(transport: transport)
+      var left = "left"
+      var right = "right"
+
+      try await client.swap(left: &left, right: &right)
+
+      #expect(left == "right")
+      #expect(right == "left")
+    }
+  }
+
+  @Test(arguments: runners)
+  func mixedRegularAndInOutParametersRouteTogether(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockInOutService()
+    let server = InOutServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = InOutServiceClient(transport: transport)
+      var name = "alice"
+
+      let result = try await client.rename(userId: "user-001", name: &name)
+
+      #expect(result == "user-001:ALICE")
+      #expect(name == "ALICE")
+      #expect(handler.renamedUserIds == ["user-001"])
+    }
+  }
+
+  @Test(arguments: runners)
+  func inOutParameterDoesNotMutateCallerOnFailure(
+    runner: IntegrationTestRunner,
+  ) async throws {
+    let handler = MockInOutService()
+    let server = InOutServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = InOutServiceClient(transport: transport)
+      var value = "client-original"
+
+      let error = await #expect(throws: RPCError.self) {
+        try await client.fail(value: &value)
+      }
+
+      #expect(error?.code == .badRequest)
+      #expect(value == "client-original")
+    }
+  }
+
+  @Test(arguments: runners)
+  func inlineHandlerMutatesInOutParameter(runner: IntegrationTestRunner) async throws {
+    nonisolated(unsafe) var capturedName = ""
+
+    let server = InlineInOutServiceServer(
+      handler: .inline(
+        normalize: { @Sendable name in
+          capturedName = name
+          name = name.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+          return !name.isEmpty
+        },
+      )
+    )
+
+    try await runner.run(server) { transport in
+      let client = InlineInOutServiceClient(transport: transport)
+      var name = "  alice  "
+
+      let result = try await client.normalize(name: &name)
+
+      #expect(result == true)
+      #expect(name == "ALICE")
+      #expect(capturedName == "  alice  ")
+    }
+  }
+}
+
 // Variadic parameter tests
 extension IntegrationTests {
   @Test(arguments: runners)

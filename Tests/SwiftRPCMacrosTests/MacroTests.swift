@@ -133,6 +133,239 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func inOutParameterWithReturnType() {
+    assertMacro {
+      """
+      @RPC
+      protocol ProfileService {
+        func normalize(name: inout String) async throws -> Bool
+      }
+      """
+    } expansion: {
+      """
+      protocol ProfileService {
+        func normalize(name: inout String) async throws -> Bool
+      }
+
+      private struct ProfileServiceInputs {
+        struct Normalize: Codable {
+          let name: String
+        }
+      }
+
+      private struct ProfileServiceOutputs {
+        struct Nothing: Codable {
+        }
+        struct NormalizeOutput: Codable {
+          let returnValue: Bool
+          let mutations: NormalizeMutations
+        }
+        struct NormalizeMutations: Codable {
+          let name: String
+        }
+      }
+
+      struct ProfileServiceClient: ProfileService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func normalize(name: inout String) async throws -> Bool {
+          let input = ProfileServiceInputs.Normalize(name: name)
+          let output = try await transport.send(
+            route: "/normalize",
+            input: input,
+            outputType: ProfileServiceOutputs.NormalizeOutput.self,
+          )
+          name = output.mutations.name
+          return output.returnValue
+        }
+      }
+
+      struct ProfileServiceServer<Handler: ProfileService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "normalize") { (input: ProfileServiceInputs.Normalize) in
+            var name = input.name
+            let returnValue = try await self.handler.normalize(name: &name)
+            return ProfileServiceOutputs.NormalizeOutput(
+              returnValue: returnValue,
+              mutations: ProfileServiceOutputs.NormalizeMutations(name: name)
+            )
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func multipleInOutParametersWithVoidReturn() {
+    assertMacro {
+      """
+      @RPC
+      protocol SwapService {
+        func swap(left: inout String, right: inout String) async throws
+      }
+      """
+    } expansion: {
+      """
+      protocol SwapService {
+        func swap(left: inout String, right: inout String) async throws
+      }
+
+      private struct SwapServiceInputs {
+        struct Swap: Codable {
+          let left: String
+          let right: String
+        }
+      }
+
+      private struct SwapServiceOutputs {
+        struct Nothing: Codable {
+        }
+        struct SwapOutput: Codable {
+          let mutations: SwapMutations
+        }
+        struct SwapMutations: Codable {
+          let left: String
+          let right: String
+        }
+      }
+
+      struct SwapServiceClient: SwapService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func swap(left: inout String, right: inout String) async throws {
+          let input = SwapServiceInputs.Swap(left: left, right: right)
+          let output = try await transport.send(
+            route: "/swap",
+            input: input,
+            outputType: SwapServiceOutputs.SwapOutput.self,
+          )
+          left = output.mutations.left
+          right = output.mutations.right
+        }
+      }
+
+      struct SwapServiceServer<Handler: SwapService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "swap") { (input: SwapServiceInputs.Swap) in
+            var left = input.left
+            var right = input.right
+            try await self.handler.swap(left: &left, right: &right)
+            return SwapServiceOutputs.SwapOutput(
+              mutations: SwapServiceOutputs.SwapMutations(left: left, right: right)
+            )
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func mixedRegularAndInOutParameters() {
+    assertMacro {
+      """
+      @RPC
+      protocol FormatService {
+        func format(id: UUID, value: inout String) async throws -> String
+      }
+      """
+    } expansion: {
+      """
+      protocol FormatService {
+        func format(id: UUID, value: inout String) async throws -> String
+      }
+
+      private struct FormatServiceInputs {
+        struct Format: Codable {
+          let id: UUID
+          let value: String
+        }
+      }
+
+      private struct FormatServiceOutputs {
+        struct Nothing: Codable {
+        }
+        struct FormatOutput: Codable {
+          let returnValue: String
+          let mutations: FormatMutations
+        }
+        struct FormatMutations: Codable {
+          let value: String
+        }
+      }
+
+      struct FormatServiceClient: FormatService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func format(id: UUID, value: inout String) async throws -> String {
+          let input = FormatServiceInputs.Format(id: id, value: value)
+          let output = try await transport.send(
+            route: "/format",
+            input: input,
+            outputType: FormatServiceOutputs.FormatOutput.self,
+          )
+          value = output.mutations.value
+          return output.returnValue
+        }
+      }
+
+      struct FormatServiceServer<Handler: FormatService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "format") { (input: FormatServiceInputs.Format) in
+            var value = input.value
+            let returnValue = try await self.handler.format(id: input.id, value: &value)
+            return FormatServiceOutputs.FormatOutput(
+              returnValue: returnValue,
+              mutations: FormatServiceOutputs.FormatMutations(value: value)
+            )
+          }
+        }
+      }
+      """
+    }
+  }
+
   @Test func noParameterMethod() {
     assertMacro {
       """
@@ -1753,6 +1986,101 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func inlineServerHandlerWithInOutParameter() {
+    assertMacro {
+      """
+      @RPC(inlineHandler: true)
+      protocol ProfileService {
+        func normalize(name: inout String) async throws -> Bool
+      }
+      """
+    } expansion: {
+      """
+      protocol ProfileService {
+        func normalize(name: inout String) async throws -> Bool
+      }
+
+      private struct ProfileServiceInputs {
+        struct Normalize: Codable {
+          let name: String
+        }
+      }
+
+      private struct ProfileServiceOutputs {
+        struct Nothing: Codable {
+        }
+        struct NormalizeOutput: Codable {
+          let returnValue: Bool
+          let mutations: NormalizeMutations
+        }
+        struct NormalizeMutations: Codable {
+          let name: String
+        }
+      }
+
+      struct ProfileServiceClient: ProfileService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func normalize(name: inout String) async throws -> Bool {
+          let input = ProfileServiceInputs.Normalize(name: name)
+          let output = try await transport.send(
+            route: "/normalize",
+            input: input,
+            outputType: ProfileServiceOutputs.NormalizeOutput.self,
+          )
+          name = output.mutations.name
+          return output.returnValue
+        }
+      }
+
+      struct ProfileServiceServer<Handler: ProfileService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "normalize") { (input: ProfileServiceInputs.Normalize) in
+            var name = input.name
+            let returnValue = try await self.handler.normalize(name: &name)
+            return ProfileServiceOutputs.NormalizeOutput(
+              returnValue: returnValue,
+              mutations: ProfileServiceOutputs.NormalizeMutations(name: name)
+            )
+          }
+        }
+      }
+
+      struct ProfileServiceInlineServerHandler: ProfileService, Sendable {
+        var normalizeHandler: @Sendable (inout String) async throws -> Bool
+
+        func normalize(name: inout String) async throws -> Bool {
+          try await normalizeHandler(&name)
+        }
+      }
+
+      extension ProfileService where Self == ProfileServiceInlineServerHandler {
+        static func inline(
+          normalize: @escaping @Sendable (inout String) async throws -> Bool,
+        ) -> ProfileServiceInlineServerHandler {
+          ProfileServiceInlineServerHandler(
+            normalizeHandler: normalize,
+          )
+        }
+      }
+      """
+    }
+  }
+
   @Test func publicInlineServerHandlerAccessModifiers() {
     assertMacro {
       """
@@ -2002,7 +2330,6 @@ struct RPCMacroDiagnosticsTests {
       """
       @RPC
       protocol BadService {
-        func update(value: inout String) async throws
         func callback(handler: () -> Void) async throws
       }
       """
@@ -2010,9 +2337,6 @@ struct RPCMacroDiagnosticsTests {
       """
       @RPC
       protocol BadService {
-        func update(value: inout String) async throws
-                           ┬───────────
-                           ╰─ 🛑 @RPC: parameter 'value' must not be inout
         func callback(handler: () -> Void) async throws
                                ┬─────────
                                ╰─ 🛑 @RPC: parameter 'handler' must use a Codable-compatible type

@@ -20,24 +20,7 @@ extension RPCMacro {
         .map { "\($0.name): \($0.name)" }
         .joined(separator: ", ")
 
-      let sendCall =
-        if method.isVoidReturn {
-          """
-          _ = try await transport.send(
-            route: "\(method.route)",
-            input: input,
-            outputType: \(outputsName).Nothing.self,
-          )
-          """
-        } else {
-          """
-          return try await transport.send(
-            route: "\(method.route)",
-            input: input,
-            outputType: \(method.returnType).self,
-          )
-          """
-        }
+      let sendCall = makeSendCall(method: method, outputsName: outputsName)
 
       let returnType = method.isVoidReturn ? "" : " -> \(method.returnType)"
       let methodBody = """
@@ -68,5 +51,53 @@ extension RPCMacro {
       """
 
     return DeclSyntax(stringLiteral: source)
+  }
+}
+
+private func makeSendCall(method: RPCMethod, outputsName: String) -> String {
+  if !method.hasInOutParams {
+    return if method.isVoidReturn {
+      """
+      _ = try await transport.send(
+        route: "\(method.route)",
+        input: input,
+        outputType: \(outputsName).Nothing.self,
+      )
+      """
+    } else {
+      """
+      return try await transport.send(
+        route: "\(method.route)",
+        input: input,
+        outputType: \(method.returnType).self,
+      )
+      """
+    }
+  } else {
+    let outputType = "\(outputsName).\(method.outputTypeName)"
+    let mutationAssignments = method.inOutParams
+      .map { "\($0.name) = output.mutations.\($0.name)" }
+      .joined(separator: "\n")
+
+    return if method.isVoidReturn {
+      """
+      let output = try await transport.send(
+        route: "\(method.route)",
+        input: input,
+        outputType: \(outputType).self,
+      )
+      \(mutationAssignments)
+      """
+    } else {
+      """
+      let output = try await transport.send(
+        route: "\(method.route)",
+        input: input,
+        outputType: \(outputType).self,
+      )
+      \(mutationAssignments)
+      return output.returnValue
+      """
+    }
   }
 }

@@ -98,14 +98,20 @@ private func makeVariadicHandlerCall(
         explicitReturn: true,
       ).indented())
       """
-  }
+    }
 
-  return """
+  let inOutVariables = makeInOutVariables(method: method)
+
+  let switchSource = """
     switch input.\(variadicParam.name).count {
     \(cases.indented())
     \(defaultCase.indented())
     }
     """
+
+  return [inOutVariables, switchSource]
+    .filter { !$0.isEmpty }
+    .joined(separator: "\n")
 }
 
 private func getVariadicCallArgs(
@@ -116,6 +122,8 @@ private func getVariadicCallArgs(
   method.params.flatMap { param in
     if param.name == variadicParam.name {
       makeCallVariadicArguments(for: param, arity: variadicArity)
+    } else if param.isInOut {
+      [param.callArgument(value: "&\(param.name)")]
     } else {
       [param.callArgument(value: "input.\(param.name)")]
     }
@@ -139,13 +147,18 @@ private func makeHandlerCall(
   outputsName: String,
   explicitReturn: Bool = false,
 ) -> String {
-  let callArgs = method.params
-    .map { param in param.callArgument(value: "input.\(param.name)") }
-    .joined(separator: ", ")
+  let callArgs = method.params.map { param in
+    if param.isInOut {
+      param.callArgument(value: "&\(param.name)")
+    } else {
+      param.callArgument(value: "input.\(param.name)")
+    }
+  }.joined(separator: ", ")
 
   return makeHandlerCallSource(
     method: method,
     outputsName: outputsName,
+    inOutVariables: makeInOutVariables(method: method),
     callArgs: callArgs,
     explicitReturn: explicitReturn,
   )
@@ -154,18 +167,64 @@ private func makeHandlerCall(
 private func makeHandlerCallSource(
   method: RPCMethod,
   outputsName: String,
+  inOutVariables: String? = nil,
   callArgs: String,
   explicitReturn: Bool,
 ) -> String {
   let call = "try await self.handler.\(method.name)(\(callArgs))"
 
-  if method.isVoidReturn {
-    return """
-      \(call)
-      return \(outputsName).Nothing()
-      """
-  }
+  if !method.hasInOutParams {
+    if method.isVoidReturn {
+      return """
+        \(call)
+        return \(outputsName).Nothing()
+        """
+    }
 
-  let returnPrefix = explicitReturn ? "return " : ""
-  return "\(returnPrefix)\(call)"
+    let returnPrefix = explicitReturn ? "return " : ""
+    return "\(returnPrefix)\(call)"
+  } else {
+    let callSource =
+      if method.isVoidReturn {
+        call
+      } else {
+        "let returnValue = \(call)"
+      }
+
+    let mutationInit = method.inOutParams
+      .map { "\($0.name): \($0.name)" }
+      .joined(separator: ", ")
+
+    let outputInit =
+      if method.isVoidReturn {
+        """
+        \(outputsName).\(method.outputTypeName)(
+          mutations: \(outputsName).\(method.mutationTypeName)(\(mutationInit))
+        )
+        """
+      } else {
+        """
+        \(outputsName).\(method.outputTypeName)(
+          returnValue: returnValue,
+          mutations: \(outputsName).\(method.mutationTypeName)(\(mutationInit))
+        )
+        """
+      }
+
+    return [
+      inOutVariables,
+      """
+      \(callSource)
+      return \(outputInit)
+      """,
+    ]
+    .compactMap(\.self)
+    .joined(separator: "\n")
+  }
+}
+
+private func makeInOutVariables(method: RPCMethod) -> String {
+  method.inOutParams
+    .map { "var \($0.name) = input.\($0.name)" }
+    .joined(separator: "\n")
 }

@@ -156,6 +156,29 @@ protocol SearchService {
 
 Any `Codable` type can be used as an input or output, including primitives, structs, enums, arrays, dictionaries, optionals, and `Void` returns.
 
+### Inout Parameters
+
+Use `inout` when a service method should return a mutated input value to the caller. The underlying value must be `Codable`.
+
+```swift
+@RPC
+protocol ProfileService {
+  func normalize(name: inout String) async throws -> Bool
+}
+
+struct ProfileServiceHandler: ProfileService {
+  func normalize(name: inout String) async throws -> Bool {
+    name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    return !name.isEmpty
+  }
+}
+
+var name = "  Alice  "
+let changed = try await client.normalize(name: &name)
+```
+
+The caller's variable is updated after a successful RPC call. If the call throws, the original local value is left unchanged.
+
 ### Variadic Arguments
 
 Variadic parameters are supported when the element type is `Codable`.

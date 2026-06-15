@@ -31,6 +31,19 @@ protocol MovieService {
   func search(query: String) async throws -> Movie
 }
 
+@RPC
+protocol InOutService {
+  func normalize(name: inout String) async throws -> Bool
+  func swap(left: inout String, right: inout String) async throws
+  func rename(userId: UserID, name: inout String) async throws -> String
+  func fail(value: inout String) async throws
+}
+
+@RPC(inlineHandler: true)
+protocol InlineInOutService {
+  func normalize(name: inout String) async throws -> Bool
+}
+
 @RPC(varargMaxArity: 3)
 protocol LogService {
   func collect(prefix: String, messages: String...) async throws -> [String]

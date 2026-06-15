@@ -179,6 +179,34 @@ class MockEchoService: EchoService, @unchecked Sendable {
   }
 }
 
+class MockInOutService: InOutService, @unchecked Sendable {
+  var normalizedNames = [String]()
+  var renamedUserIds = [UserID]()
+
+  func normalize(name: inout String) async throws -> Bool {
+    name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    normalizedNames.append(name)
+    return !name.isEmpty
+  }
+
+  func swap(left: inout String, right: inout String) async throws {
+    let originalLeft = left
+    left = right
+    right = originalLeft
+  }
+
+  func rename(userId: UserID, name: inout String) async throws -> String {
+    renamedUserIds.append(userId)
+    name = name.uppercased()
+    return "\(userId):\(name)"
+  }
+
+  func fail(value: inout String) async throws {
+    value = "server-mutated"
+    throw RPCError(code: .badRequest, message: "Rejected")
+  }
+}
+
 class MockLogService: LogService, @unchecked Sendable {
   var collectCalls = 0
   var collectedPrefixes = [String]()

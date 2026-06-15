@@ -113,7 +113,7 @@ private func makeInlineHandlerCall(
   explicitReturn: Bool = false,
 ) -> String {
   let forwardedArgs = method.params
-    .map(\.name)
+    .map { $0.isInOut ? "&\($0.name)" : $0.name }
     .joined(separator: ", ")
 
   return makeInlineHandlerCallSource(
@@ -132,6 +132,8 @@ private func makeVariadicInlineHandlerCall(
   let forwardedArgs = method.params.flatMap { param in
     if param.name == variadicParam.name {
       param.closureVariadicArguments(arity: variadicArity)
+    } else if param.isInOut {
+      ["&\(param.name)"]
     } else {
       [param.name]
     }

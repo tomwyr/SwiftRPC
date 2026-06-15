@@ -111,6 +111,16 @@ struct RPCMethod {
     "\(name.prefix(1).uppercased())\(name.dropFirst())"
   }
 
+  /// The internal output struct name for methods that return inout mutations.
+  var outputTypeName: String {
+    "\(inputTypeName)Output"
+  }
+
+  /// The internal mutation struct name for methods that return inout mutations.
+  var mutationTypeName: String {
+    "\(inputTypeName)Mutations"
+  }
+
   /// The route path, e.g. `/getUser`
   var route: String { "/\(name)" }
 
@@ -129,6 +139,16 @@ struct RPCMethod {
   var variadicParam: RPCParameter? {
     params.first(where: \.isVariadic)
   }
+
+  /// Parameters whose values can be mutated by the server.
+  var inOutParams: [RPCParameter] {
+    params.filter(\.isInOut)
+  }
+
+  /// Whether the generated response needs to carry mutated parameter values.
+  var hasInOutParams: Bool {
+    !inOutParams.isEmpty
+  }
 }
 
 struct RPCParameter {
@@ -136,17 +156,30 @@ struct RPCParameter {
   let name: String
   let elementType: String
   let isVariadic: Bool
+  let isInOut: Bool
 
   init(from param: FunctionParameterSyntax) {
     label = param.firstName.text
     name = param.secondName?.text ?? label
-    elementType = param.type.trimmedDescription
     isVariadic = param.ellipsis != nil
+    isInOut = param.isInOut
+
+    if isInOut, let attributed = param.type.as(AttributedTypeSyntax.self) {
+      elementType = attributed.baseType.trimmedDescription
+    } else {
+      elementType = param.type.trimmedDescription
+    }
   }
 
   /// The generated method parameter type, preserving variadic syntax.
   var methodType: String {
-    isVariadic ? "\(elementType)..." : elementType
+    if isInOut {
+      "inout \(elementType)"
+    } else if isVariadic {
+      "\(elementType)..."
+    } else {
+      elementType
+    }
   }
 
   /// The input payload field type, e.g. `String...` becomes `[String]`.
