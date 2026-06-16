@@ -3,13 +3,13 @@ import SwiftRPC
 
 struct InMemoryApp {
   static func run() async throws {
-    let transport = InMemoryTransport()
-
-    // Register the server on the transport
+    // Store the server handlers in an in-memory registry.
+    let registry = InMemoryHandlerRegistry()
     let server = AppServiceServer(handler: AppServiceHandler())
-    server.register(on: transport)
+    server.register(on: registry)
 
-    // Create the client with the same transport
+    // Create a client transport from the registered handlers.
+    let transport = InMemoryTransport(from: registry)
     let client = AppServiceClient(transport: transport)
 
     print("=== In-Memory Client-Server Running ===\n")

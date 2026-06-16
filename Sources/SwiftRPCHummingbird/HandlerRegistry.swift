@@ -4,9 +4,7 @@ import SwiftRPC
 
 /// Hummingbird implementation of RPCHandlerRegistry.
 /// Handles HTTP-specific details like request parsing and response formatting.
-struct HummingbirdHandlerRegistry<Context: RequestContext>:
-  RPCHandlerRegistry, @unchecked Sendable
-{
+struct HummingbirdHandlerRegistry<Context: RequestContext>: RPCHandlerRegistry {
   let router: any RouterMethods<Context>
 
   init(router: any RouterMethods<Context>) {

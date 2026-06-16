@@ -80,7 +80,7 @@ public protocol RPCTransport: Sendable {
 
 /// Registering RPC handlers with a transport.
 /// Each transport provides its own implementation of the protocol.
-public protocol RPCHandlerRegistry: Sendable {
+public protocol RPCHandlerRegistry {
   func register<Input: Codable & Sendable, Output: Codable & Sendable>(
     method: String,
     handler: @escaping @Sendable (Input) async throws -> Output

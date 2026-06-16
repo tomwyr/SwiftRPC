@@ -1,11 +1,13 @@
 import Foundation
 
-/// In-memory transport for running both client and server in the same process.
-public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @unchecked Sendable {
-  private var handlers: [String: (Codable) async throws -> Codable] = [:]
+/// Stores a handler for same-process RPC calls between a server and client.
+public final class InMemoryHandlerRegistry: RPCHandlerRegistry {
+  private var handlers: [String: InMemoryHandler] = [:]
 
+  /// Creates an empty in-memory handler registry.
   public init() {}
 
+  /// Registers a handler for an RPC method.
   public func register<Input: Codable & Sendable, Output: Codable & Sendable>(
     method: String,
     handler: @escaping @Sendable (Input) async throws -> Output
@@ -20,7 +22,18 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
       return try await handler(typedInput)
     }
   }
+}
 
+/// In-memory transport for running both client and server in the same process.
+public struct InMemoryTransport: RPCTransport {
+  private let handlers: [String: InMemoryHandler]
+
+  /// Creates a transport from the handlers currently stored in a registry.
+  public init(from registry: InMemoryHandlerRegistry) {
+    self.handlers = registry.handlersSnapshot
+  }
+
+  /// Sends an in-memory RPC request to a registered method handler.
   public func send<Input: Codable, Output: Codable>(
     route: String,
     input: Input,
@@ -50,6 +63,14 @@ public final class InMemoryTransport: RPCTransport, RPCHandlerRegistry, @uncheck
       )
     }
     return typedOutput
+  }
+}
+
+private typealias InMemoryHandler = @Sendable (Codable) async throws -> Codable
+
+extension InMemoryHandlerRegistry {
+  fileprivate var handlersSnapshot: [String: InMemoryHandler] {
+    handlers
   }
 }
 

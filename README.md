@@ -250,8 +250,9 @@ UserServiceServer(handler: UserServiceHandler()).register(on: router)
 For tests or same-process composition, use `InMemoryTransport` with the generated server and client:
 
 ```swift
-let transport = InMemoryTransport()
-UserServiceServer(handler: UserServiceHandler()).register(on: transport)
+let registry = InMemoryHandlerRegistry()
+UserServiceServer(handler: UserServiceHandler()).register(on: registry)
+let transport = InMemoryTransport(from: registry)
 let client = UserServiceClient(transport: transport)
 ```
 

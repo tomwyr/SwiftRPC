@@ -22,8 +22,9 @@ struct InMemoryTestRunner: IntegrationTestRunner {
     _ server: RPCServer,
     body: @escaping @Sendable (RPCTransport) async throws -> Void,
   ) async throws {
-    let transport = InMemoryTransport()
-    server.register(on: transport)
+    let registry = InMemoryHandlerRegistry()
+    server.register(on: registry)
+    let transport = InMemoryTransport(from: registry)
     try await body(transport)
   }
 }

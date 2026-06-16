@@ -653,3 +653,27 @@ extension IntegrationTests {
     }
   }
 }
+
+// Concurrency tests
+extension IntegrationTests {
+  @Test(arguments: runners)
+  func sendingComponentsToSubtasks(runner: IntegrationTestRunner) async throws {
+    let handler = MockEchoService()
+    handler.pingResult = "pong"
+
+    let server = await Task {
+      EchoServiceServer(handler: handler)
+    }.value
+
+    try await runner.run(server) { transport in
+      let client = await Task {
+        EchoServiceClient(transport: transport)
+      }.value
+
+      let result = try await client.ping()
+
+      #expect(result == "pong")
+      #expect(handler.pingCalls == 1)
+    }
+  }
+}
