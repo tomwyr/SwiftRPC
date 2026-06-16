@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Added variadic parameters support.
+- Added `inout` parameters support.
+- Removed unchecked sendability from production code.
+
 ## 0.5.0
 
 - Added `@RPC` macro for defining type-safe RPC services from Swift protocols.
