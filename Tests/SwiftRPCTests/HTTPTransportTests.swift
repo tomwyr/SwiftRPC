@@ -153,7 +153,7 @@ import Testing
     let session = MockTransportURLSession { request in
       let error = RPCError(code: .badRequest, message: "Invalid input")
       let response = makeResponse(for: request, status: 200)
-      let body = try rpcEncode(RPCResponse<String>.failure(.core(error)))
+      let body = try rpcEncode(RPCResponse<String>.failure(.rpc(error)))
       return (body, response)
     }
 

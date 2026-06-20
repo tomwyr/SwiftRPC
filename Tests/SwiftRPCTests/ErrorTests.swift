@@ -4,7 +4,7 @@ import Testing
 @testable import SwiftRPC
 
 @Suite struct RPCErrorTests {
-  @Test func coreErrorDescription() {
+  @Test func rpcErrorDescription() {
     let notFoundError = RPCError(code: .notFound, message: "Resource not found")
     #expect(notFoundError.errorDescription == "[NOT_FOUND] Resource not found")
 
@@ -15,23 +15,23 @@ import Testing
     #expect(internalError.errorDescription == "[INTERNAL_ERROR] Server error occurred")
   }
 
-  @Test func coreErrorCoding() throws {
-    let failure = RPCResponseError.core(RPCError(code: .badRequest, message: "Invalid input"))
+  @Test func rpcErrorCoding() throws {
+    let failure = RPCResponseError.rpc(RPCError(code: .badRequest, message: "Invalid input"))
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
 
     let data = try encoder.encode(failure)
     let json = try #require(String(data: data, encoding: .utf8))
-    #expect(json == #"{"code":"BAD_REQUEST","message":"Invalid input","type":"core"}"#)
+    #expect(json == #"{"code":"BAD_REQUEST","message":"Invalid input","type":"rpc"}"#)
 
     let decoded = try JSONDecoder().decode(RPCResponseError.self, from: data)
 
     switch decoded {
-    case .core(let error):
+    case .rpc(let error):
       #expect(error.code == .badRequest)
       #expect(error.message == "Invalid input")
     case .service:
-      Issue.record("Expected core failure but got service failure")
+      Issue.record("Expected RPC failure but got service failure")
     }
   }
 
@@ -54,8 +54,8 @@ import Testing
     switch decoded {
     case .success:
       Issue.record("Expected failure but got success")
-    case .failure(.core):
-      Issue.record("Expected service failure but got core failure")
+    case .failure(.rpc):
+      Issue.record("Expected service failure but got RPC failure")
     case .failure(.service(let error)):
       #expect(error == serviceError)
     }
@@ -77,7 +77,7 @@ import Testing
     }
   }
 
-  @Test func coreErrorWithoutType() {
+  @Test func rpcErrorWithoutType() {
     let data = Data(#"{"code":"NOT_FOUND","message":"Missing"}"#.utf8)
 
     #expect(throws: DecodingError.self) {

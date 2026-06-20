@@ -198,11 +198,11 @@ import Testing
         switch responseBody {
         case .success:
           Issue.record("Expected failure but got success")
-        case .failure(.core(let error)):
+        case .failure(.rpc(let error)):
           #expect(error.code == .notFound)
           #expect(error.message == "Resource not found")
         case .failure(.service):
-          Issue.record("Expected core failure but got service failure")
+          Issue.record("Expected RPC failure but got service failure")
         }
       }
     }
@@ -235,11 +235,11 @@ import Testing
           switch responseBody {
           case .success:
             Issue.record("Expected failure but got success")
-          case .failure(.core(let error)):
+          case .failure(.rpc(let error)):
             #expect(error.code == .internalError)
             #expect(error.message == message)
           case .failure(.service):
-            Issue.record("Expected core failure but got service failure")
+            Issue.record("Expected RPC failure but got service failure")
           }
         }
       }
@@ -270,10 +270,10 @@ import Testing
           switch responseBody {
           case .success:
             Issue.record("Expected failure but got success for \(errorCode)")
-          case .failure(.core(let error)):
+          case .failure(.rpc(let error)):
             #expect(error.code == errorCode)
           case .failure(.service):
-            Issue.record("Expected core failure but got service failure for \(errorCode)")
+            Issue.record("Expected RPC failure but got service failure for \(errorCode)")
           }
         }
       }

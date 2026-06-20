@@ -37,7 +37,7 @@ public final class HTTPTransport: RPCTransport, Sendable {
     switch response {
     case .success(let output):
       return output
-    case .failure(.core(let error)):
+    case .failure(.rpc(let error)):
       throw error
     case .failure(.service(let error)):
       throw error
@@ -57,7 +57,7 @@ public final class HTTPTransport: RPCTransport, Sendable {
     switch response {
     case .success(let output):
       return output
-    case .failure(.core(let error)):
+    case .failure(.rpc(let error)):
       throw error
     case .failure(.service(let error)):
       throw error

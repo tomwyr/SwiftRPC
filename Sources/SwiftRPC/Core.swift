@@ -25,11 +25,11 @@ enum RPCTypedResponse<Output: Codable, ServiceError: RPCServiceError>: Decodable
   /// A successful RPC result.
   case success(Output)
 
-  /// A failed RPC result with either a core error or the declared service error type.
+  /// A failed RPC result with either an RPC error or the declared service error type.
   case failure(RPCTypedResponseError<ServiceError>)
 }
 
-/// A failure reported by the core RPC layer.
+/// A failure reported by the RPC layer.
 public struct RPCError: Error, LocalizedError, Codable, Sendable {
   /// The kind of failure that occurred.
   public let code: RPCErrorCode
@@ -85,19 +85,10 @@ extension RPCServiceErrorEnvelope {
   }
 }
 
-/// The type of failure returned in an RPC response.
-public enum RPCResponseErrorType: String, Codable, Sendable {
-  /// A framework-level RPC failure.
-  case core
-
-  /// A service-defined failure.
-  case service
-}
-
 /// A failure returned in an RPC response.
 public enum RPCResponseError: Error, Codable, Sendable {
-  /// A framework-level RPC failure.
-  case core(RPCError)
+  /// An RPC failure.
+  case rpc(RPCError)
 
   /// A service-defined failure.
   case service(RPCServiceErrorEnvelope)

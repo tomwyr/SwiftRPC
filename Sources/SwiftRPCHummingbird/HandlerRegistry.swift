@@ -26,14 +26,14 @@ struct HummingbirdHandlerRegistry<Context: RequestContext>: RPCHandlerRegistry {
         let response = RPCResponse<Output>.success(result)
         return try context.responseEncoder.encode(response, from: request, context: context)
       } catch let rpcError as RPCError {
-        let response = RPCResponse<Output>.failure(.core(rpcError))
+        let response = RPCResponse<Output>.failure(.rpc(rpcError))
         return try context.responseEncoder.encode(response, from: request, context: context)
       } catch let serviceError as RPCServiceErrorEnvelope {
         let response = RPCResponse<Output>.failure(.service(serviceError))
         return try context.responseEncoder.encode(response, from: request, context: context)
       } catch {
         let rpcError = RPCError(code: .internalError, message: error.outMessage)
-        let response = RPCResponse<Output>.failure(.core(rpcError))
+        let response = RPCResponse<Output>.failure(.rpc(rpcError))
         return try context.responseEncoder.encode(response, from: request, context: context)
       }
     }

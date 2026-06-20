@@ -33,8 +33,8 @@ extension RPCResponseError {
     let type = try container.decodeResponseErrorType()
 
     switch type {
-    case .core:
-      self = .core(try container.decodeCoreError())
+    case .rpc:
+      self = .rpc(try container.decodeRPCError())
     case .service:
       throw DecodingError.dataCorruptedError(
         forKey: .payload,
@@ -49,8 +49,8 @@ extension RPCResponseError {
     var container = encoder.container(keyedBy: RPCResponseErrorCodingKeys.self)
 
     switch self {
-    case .core(let error):
-      try container.encode(RPCResponseErrorType.core, forKey: .type)
+    case .rpc(let error):
+      try container.encode(RPCResponseErrorType.rpc, forKey: .type)
       try container.encode(error.code, forKey: .code)
       try container.encode(error.message, forKey: .message)
     case .service(let failure):
@@ -72,8 +72,8 @@ extension RPCTypedResponse {
 
 /// Decoding helper for RPC failures with a known service-defined error type.
 enum RPCTypedResponseError<ServiceError: RPCServiceError>: Decodable {
-  /// A framework-level RPC failure.
-  case core(RPCError)
+  /// An RPC failure.
+  case rpc(RPCError)
 
   /// A service-defined failure decoded as the declared service error type.
   case service(ServiceError)
@@ -83,8 +83,8 @@ enum RPCTypedResponseError<ServiceError: RPCServiceError>: Decodable {
     let type = try container.decodeResponseErrorType()
 
     switch type {
-    case .core:
-      self = .core(try container.decodeCoreError())
+    case .rpc:
+      self = .rpc(try container.decodeRPCError())
     case .service:
       let error = try ServiceError(from: container.superDecoder(forKey: .payload))
       self = .service(error)
@@ -97,6 +97,11 @@ private enum RPCResponseErrorCodingKeys: String, CodingKey {
   case code
   case message
   case payload
+}
+
+private enum RPCResponseErrorType: String, Codable, Sendable {
+  case rpc
+  case service
 }
 
 extension KeyedDecodingContainer {
@@ -133,7 +138,7 @@ extension KeyedDecodingContainer where Key == RPCResponseErrorCodingKeys {
 
   }
 
-  fileprivate func decodeCoreError() throws -> RPCError {
+  fileprivate func decodeRPCError() throws -> RPCError {
     let code = try decode(RPCErrorCode.self, forKey: .code)
     let message = try decode(String.self, forKey: .message)
     return RPCError(code: code, message: message)
