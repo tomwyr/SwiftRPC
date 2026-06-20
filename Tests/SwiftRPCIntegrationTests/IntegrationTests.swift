@@ -445,6 +445,96 @@ extension IntegrationTests {
       #expect(error?.message == "Internal error")
     }
   }
+
+  @Test(arguments: runners)
+  func serviceFailure(runner: IntegrationTestRunner) async throws {
+    let handler = MockPasswordFailureService()
+    handler.failureMode = .serviceError
+    let server = PasswordFailureServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = PasswordFailureServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCFailure<PasswordError>.self) {
+        try await client.authenticateWithFailure(username: "alice", password: "wrong")
+      }
+
+      switch error {
+      case .service(.expiredToken):
+        break
+      default:
+        Issue.record("Expected service failure")
+      }
+    }
+  }
+
+  @Test(arguments: runners)
+  func rpcFailure(runner: IntegrationTestRunner) async throws {
+    let handler = MockPasswordFailureService()
+    handler.failureMode = .rpcError
+    let server = PasswordFailureServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = PasswordFailureServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCFailure<PasswordError>.self) {
+        try await client.authenticateWithFailure(username: "alice", password: "wrong")
+      }
+
+      switch error {
+      case .rpc(let rpcError):
+        #expect(rpcError.code == .unauthorized)
+        #expect(rpcError.message == "Unauthorized")
+      default:
+        Issue.record("Expected RPC failure")
+      }
+    }
+  }
+
+  @Test(arguments: runners)
+  func serviceFailureWithTypedServiceError(runner: IntegrationTestRunner) async throws {
+    let handler = MockUserErrorService()
+    handler.typedFailureMode = .serviceError
+    let server = UserErrorServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = UserErrorServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCFailure<PasswordError>.self) {
+        try await client.authenticateWithFailure(username: "alice", password: "wrong")
+      }
+
+      switch error {
+      case .service(.expiredToken):
+        break
+      default:
+        Issue.record("Expected service failure")
+      }
+    }
+  }
+
+  @Test(arguments: runners)
+  func rpcFailureWithTypedServiceError(runner: IntegrationTestRunner) async throws {
+    let handler = MockUserErrorService()
+    handler.typedFailureMode = .rpcError
+    let server = UserErrorServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = UserErrorServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCFailure<PasswordError>.self) {
+        try await client.authenticateWithFailure(username: "alice", password: "wrong")
+      }
+
+      switch error {
+      case .rpc(let rpcError):
+        #expect(rpcError.code == .unauthorized)
+        #expect(rpcError.message == "Unauthorized")
+      default:
+        Issue.record("Expected RPC failure")
+      }
+    }
+  }
 }
 
 // Inline handler tests

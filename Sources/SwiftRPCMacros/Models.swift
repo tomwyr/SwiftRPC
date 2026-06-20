@@ -102,6 +102,7 @@ struct RPCMethod {
   let params: [RPCParameter]
   let returnType: String
   let isVoidReturn: Bool
+  let failureServiceErrorType: String?
 
   init(from fn: FunctionDeclSyntax) {
     name = fn.name.text
@@ -111,6 +112,8 @@ struct RPCMethod {
     let returnClause = fn.signature.returnClause
     returnType = returnClause?.type.trimmedDescription ?? "Void"
     isVoidReturn = returnClause.isVoidLike()
+    let throwsClause = fn.signature.effectSpecifiers?.throwsClause
+    failureServiceErrorType = throwsClause?.type?.failureServiceErrorType
   }
 
   /// The internal input struct name, e.g. `GetUser`
@@ -155,6 +158,29 @@ struct RPCMethod {
   /// Whether the generated response needs to carry mutated parameter values.
   var hasInOutParams: Bool {
     !inOutParams.isEmpty
+  }
+
+  /// The generated throws clause, preserving typed RPC failures.
+  var throwsClause: String {
+    if let failureServiceErrorType {
+      "throws(RPCFailure<\(failureServiceErrorType)>)"
+    } else {
+      "throws"
+    }
+  }
+
+  /// The generated handler closure throws clause.
+  var closureThrowsClause: String {
+    if let failureServiceErrorType {
+      "throws(RPCFailure<\(failureServiceErrorType)>)"
+    } else {
+      "throws"
+    }
+  }
+
+  /// The method-level service error type, if declared with typed RPC failures.
+  func serviceErrorType(default defaultServiceErrorType: String?) -> String? {
+    failureServiceErrorType ?? defaultServiceErrorType
   }
 }
 
@@ -217,5 +243,20 @@ struct RPCParameter {
   /// Generated inline closure variadic arguments for a fixed arity.
   func closureVariadicArguments(arity: Int) -> [String] {
     (0..<arity).map { "\(name)[\($0)]" }
+  }
+}
+
+extension TypeSyntax {
+  var failureServiceErrorType: String? {
+    guard let identifier = self.as(IdentifierTypeSyntax.self),
+      identifier.name.text == "RPCFailure",
+      let arguments = identifier.genericArgumentClause?.arguments,
+      arguments.count == 1,
+      case .type(let serviceErrorType) = arguments.first?.argument
+    else {
+      return nil
+    }
+
+    return serviceErrorType.trimmedDescription
   }
 }

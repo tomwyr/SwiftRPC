@@ -269,6 +269,32 @@ do {
 }
 ```
 
+#### Typed RPC Failures
+
+Use `RPCFailure` when a method should expose both RPC errors and a typed service error:
+
+```swift
+enum PasswordError: RPCServiceError {
+  case expiredToken
+}
+
+@RPC
+protocol UserService {
+  func resetPassword(token: String) async throws(RPCFailure<PasswordError>)
+}
+
+do {
+  try await client.resetPassword(token: token)
+} catch let failure as RPCFailure<PasswordError> {
+  switch failure {
+  case .rpc(let error):
+    print(error.message)
+  case .service(.expiredToken):
+    print("Token expired")
+  }
+}
+```
+
 ## Transports
 
 Use the generated `baseURL` initializer when a client calls a service over HTTP:

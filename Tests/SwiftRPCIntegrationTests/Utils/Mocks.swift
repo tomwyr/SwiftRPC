@@ -188,6 +188,7 @@ class MockUserErrorService: UserErrorService, @unchecked Sendable {
   }
 
   var failureMode = FailureMode.none
+  var typedFailureMode = FailureMode.none
   var authToken = AuthToken(token: "service-token", expiresAt: 3600)
 
   func authenticate(username: String, password: String) async throws -> AuthToken {
@@ -200,6 +201,45 @@ class MockUserErrorService: UserErrorService, @unchecked Sendable {
       throw RPCError(code: .unauthorized, message: "Unauthorized")
     case .unknownError:
       throw UnexpectedError()
+    }
+  }
+
+  func authenticateWithFailure(username: String, password: String) async throws(
+    RPCFailure<PasswordError>
+  ) -> AuthToken {
+    switch typedFailureMode {
+    case .none:
+      return authToken
+    case .serviceError:
+      throw .service(.expiredToken)
+    case .rpcError:
+      throw .rpc(RPCError(code: .unauthorized, message: "Unauthorized"))
+    case .unknownError:
+      throw .rpc(RPCError(code: .internalError, message: "Internal error"))
+    }
+  }
+
+  func resetPassword(username: String) async throws(RPCFailure<PasswordError>) -> Bool {
+    throw .service(.expiredToken)
+  }
+}
+
+class MockPasswordFailureService: PasswordFailureService, @unchecked Sendable {
+  var failureMode = MockUserErrorService.FailureMode.none
+  var authToken = AuthToken(token: "password-service-token", expiresAt: 3600)
+
+  func authenticateWithFailure(username: String, password: String) async throws(
+    RPCFailure<PasswordError>
+  ) -> AuthToken {
+    switch failureMode {
+    case .none:
+      return authToken
+    case .serviceError:
+      throw .service(.expiredToken)
+    case .rpcError:
+      throw .rpc(RPCError(code: .unauthorized, message: "Unauthorized"))
+    case .unknownError:
+      throw .rpc(RPCError(code: .internalError, message: "Internal error"))
     }
   }
 }

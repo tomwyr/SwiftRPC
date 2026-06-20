@@ -15,6 +15,7 @@ extension RPCMacro {
     var methodRegistrations = [String]()
 
     for method in proto.methods {
+      let methodServiceErrorType = method.serviceErrorType(default: serviceErrorType)
       let handlerCall =
         if let variadicParam = method.variadicParam {
           makeVariadicHandlerCall(
@@ -27,13 +28,17 @@ extension RPCMacro {
           makeHandlerCall(
             method: method,
             outputsName: outputsName,
-            explicitReturn: serviceErrorType != nil,
+            explicitReturn: methodServiceErrorType != nil,
           )
         }
 
       let registrationBody =
-        if let serviceErrorType {
-          makeErrorGuarded(handlerCall: handlerCall, serviceErrorType: serviceErrorType)
+        if let methodServiceErrorType {
+          makeTypedErrorHandlerCall(
+            handlerCall,
+            serviceErrorType: methodServiceErrorType,
+            typedFailureServiceErrorType: method.failureServiceErrorType,
+          )
         } else {
           handlerCall
         }
@@ -71,18 +76,47 @@ extension RPCMacro {
   }
 }
 
-private func makeErrorGuarded(handlerCall: String, serviceErrorType: String) -> String {
-  """
-  do {
-  \(handlerCall.indented())
-  } catch let error as RPCError {
-    throw error
-  } catch let error as RPCServiceErrorEnvelope {
-    throw error
-  } catch let error as \(serviceErrorType) {
-    throw RPCServiceErrorEnvelope(error)
-  }
-  """
+private func makeTypedErrorHandlerCall(
+  _ handlerCall: String,
+  serviceErrorType: String,
+  typedFailureServiceErrorType: String?,
+) -> String {
+  let typedFailureCatch =
+    if let typedFailureServiceErrorType {
+      """
+      } catch let error as RPCFailure<\(typedFailureServiceErrorType)> {
+        switch error {
+        case .rpc(let error):
+          throw error
+        case .service(let error):
+          throw RPCServiceErrorEnvelope(error)
+        }
+      """
+    } else {
+      ""
+    }
+
+  let serviceErrorCatch =
+    if typedFailureServiceErrorType == nil {
+      """
+      } catch let error as \(serviceErrorType) {
+        throw RPCServiceErrorEnvelope(error)
+      """
+    } else {
+      ""
+    }
+
+  return """
+    do {
+    \(handlerCall.indented())
+    \(typedFailureCatch)
+    } catch let error as RPCError {
+      throw error
+    } catch let error as RPCServiceErrorEnvelope {
+      throw error
+    \(serviceErrorCatch)
+    }
+    """
 }
 
 private func makeVariadicHandlerCall(

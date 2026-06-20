@@ -29,6 +29,15 @@ protocol EchoService {
 @RPC(serviceError: UserError.self)
 protocol UserErrorService {
   func authenticate(username: String, password: String) async throws -> AuthToken
+  func authenticateWithFailure(username: String, password: String)
+    async throws(RPCFailure<PasswordError>) -> AuthToken
+  func resetPassword(username: String) async throws(RPCFailure<PasswordError>) -> Bool
+}
+
+@RPC
+protocol PasswordFailureService {
+  func authenticateWithFailure(username: String, password: String)
+    async throws(RPCFailure<PasswordError>) -> AuthToken
 }
 
 @RPC(inlineHandler: true)

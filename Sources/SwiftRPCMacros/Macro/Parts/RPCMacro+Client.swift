@@ -24,12 +24,12 @@ extension RPCMacro {
       let sendCall = makeSendCall(
         method: method,
         outputsName: outputsName,
-        serviceErrorType: serviceErrorType,
+        serviceErrorType: method.serviceErrorType(default: serviceErrorType),
       )
 
       let returnType = method.isVoidReturn ? "" : " -> \(method.returnType)"
       let methodBody = """
-        \(access)func \(method.name)(\(paramList)) async throws\(returnType) {
+        \(access)func \(method.name)(\(paramList)) async \(method.throwsClause)\(returnType) {
           let input = \(inputTypeName)(\(inputInit))
         \(sendCall.indented())
         }
@@ -87,6 +87,13 @@ private func makeSendCall(
         serviceErrorType: serviceErrorType,
       )
     }
+
+  if let typedFailureServiceErrorType = method.failureServiceErrorType {
+    return makeTypedFailureSendCall(
+      sendCall,
+      serviceErrorType: typedFailureServiceErrorType,
+    )
+  }
 
   return sendCall
 }
@@ -159,4 +166,21 @@ private func makeServiceErrorArg(_ serviceErrorType: String?) -> String {
   } else {
     ""
   }
+}
+
+private func makeTypedFailureSendCall(
+  _ sendCall: String,
+  serviceErrorType: String,
+) -> String {
+  """
+  do {
+  \(sendCall.indented())
+  } catch let error as RPCError {
+    throw .rpc(error)
+  } catch let error as \(serviceErrorType) {
+    throw .service(error)
+  } catch {
+    throw .rpc(RPCError(code: .internalError, message: error.outMessage))
+  }
+  """
 }

@@ -140,6 +140,176 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func rpcFailureExpansion() {
+    assertMacro {
+      """
+      @RPC
+      protocol AccountService {
+        func load(id: String) async throws(RPCFailure<ServiceError>) -> Account
+      }
+      """
+    } expansion: {
+      """
+      protocol AccountService {
+        func load(id: String) async throws(RPCFailure<ServiceError>) -> Account
+      }
+
+      private struct AccountServiceInputs {
+        struct Load: Codable {
+          let id: String
+        }
+      }
+
+      private struct AccountServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct AccountServiceClient: AccountService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func load(id: String) async throws(RPCFailure<ServiceError>) -> Account {
+          let input = AccountServiceInputs.Load(id: id)
+          do {
+            return try await transport.send(
+              route: "/load",
+              input: input,
+              outputType: Account.self,
+              serviceErrorType: ServiceError.self,
+            )
+          } catch let error as RPCError {
+            throw .rpc(error)
+          } catch let error as ServiceError {
+            throw .service(error)
+          } catch {
+            throw .rpc(RPCError(code: .internalError, message: error.outMessage))
+          }
+        }
+      }
+
+      struct AccountServiceServer<Handler: AccountService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "load") { (input: AccountServiceInputs.Load) in
+            do {
+              return try await self.handler.load(id: input.id)
+            } catch let error as RPCFailure<ServiceError> {
+              switch error {
+              case .rpc(let error):
+                throw error
+              case .service(let error):
+                throw RPCServiceErrorEnvelope(error)
+              }
+            } catch let error as RPCError {
+              throw error
+            } catch let error as RPCServiceErrorEnvelope {
+              throw error
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func rpcFailureOverridesAnnotationServiceErrorExpansion() {
+    assertMacro {
+      """
+      @RPC(serviceError: AnnotationError.self)
+      protocol AccountService {
+        func load(id: String) async throws(RPCFailure<MethodError>) -> Account
+      }
+      """
+    } expansion: {
+      """
+      protocol AccountService {
+        func load(id: String) async throws(RPCFailure<MethodError>) -> Account
+      }
+
+      private struct AccountServiceInputs {
+        struct Load: Codable {
+          let id: String
+        }
+      }
+
+      private struct AccountServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct AccountServiceClient: AccountService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func load(id: String) async throws(RPCFailure<MethodError>) -> Account {
+          let input = AccountServiceInputs.Load(id: id)
+          do {
+            return try await transport.send(
+              route: "/load",
+              input: input,
+              outputType: Account.self,
+              serviceErrorType: MethodError.self,
+            )
+          } catch let error as RPCError {
+            throw .rpc(error)
+          } catch let error as MethodError {
+            throw .service(error)
+          } catch {
+            throw .rpc(RPCError(code: .internalError, message: error.outMessage))
+          }
+        }
+      }
+
+      struct AccountServiceServer<Handler: AccountService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "load") { (input: AccountServiceInputs.Load) in
+            do {
+              return try await self.handler.load(id: input.id)
+            } catch let error as RPCFailure<MethodError> {
+              switch error {
+              case .rpc(let error):
+                throw error
+              case .service(let error):
+                throw RPCServiceErrorEnvelope(error)
+              }
+            } catch let error as RPCError {
+              throw error
+            } catch let error as RPCServiceErrorEnvelope {
+              throw error
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
   @Test func multipleParametersWrappedIntoInputStruct() {
     assertMacro {
       """

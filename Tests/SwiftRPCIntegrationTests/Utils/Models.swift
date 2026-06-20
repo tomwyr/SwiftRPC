@@ -40,6 +40,10 @@ enum UserError: RPCServiceError, Equatable {
   case updateFailed
 }
 
+enum PasswordError: RPCServiceError, Equatable {
+  case expiredToken
+}
+
 struct UnexpectedError: Error {}
 
 struct Movie: Codable, Equatable {

@@ -52,6 +52,15 @@ public struct RPCError: Error, LocalizedError, Codable, Sendable {
 /// A service-defined error that can be transported through RPC failures.
 public protocol RPCServiceError: Error, Codable, Sendable {}
 
+/// A typed RPC failure with either an RPC-layer error or a service-defined error.
+public enum RPCFailure<ServiceError: RPCServiceError>: Error, Sendable {
+  /// A failure reported by the RPC layer.
+  case rpc(RPCError)
+
+  /// A service-defined failure.
+  case service(ServiceError)
+}
+
 /// A service-defined error transported through RPC.
 public struct RPCServiceErrorEnvelope: Error, Sendable {
   let error: any RPCServiceError

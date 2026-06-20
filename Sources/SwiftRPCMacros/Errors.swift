@@ -12,6 +12,7 @@ enum RPCMacroError: Error, CustomStringConvertible {
   case invalidVarargMaxArity(max: Int)
   case invalidVarargOverflowBehavior
   case invalidServiceError
+  case unsupportedTypedThrows(name: String)
 
   var description: String {
     switch self {
@@ -37,6 +38,8 @@ enum RPCMacroError: Error, CustomStringConvertible {
       "@RPC: 'varargOverflowBehavior' must be '.reject' or '.truncate'"
     case .invalidServiceError:
       "@RPC: 'serviceError' must be a service error type reference such as 'ServiceError.self'"
+    case .unsupportedTypedThrows(let name):
+      "@RPC: '\(name)' typed throws must use 'RPCFailure<ServiceError>'"
     }
   }
 }

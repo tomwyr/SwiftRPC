@@ -11,7 +11,7 @@ extension RPCMacro {
 
     let propertyDecls =
       proto.methods.map { method in
-        "\(access)var \(method.handlerPropertyName): @Sendable \(method.closureParameterTypes) async throws -> \(method.returnType)"
+        "\(access)var \(method.handlerPropertyName): @Sendable \(method.closureParameterTypes) async \(method.closureThrowsClause) -> \(method.returnType)"
       }
       .joined(separator: "\n")
 
@@ -55,7 +55,7 @@ private func makeInlineHandlerMethod(
     }
 
   return """
-    \(access)func \(method.name)(\(signatureParams)) async throws\(returnType) {
+    \(access)func \(method.name)(\(signatureParams)) async \(method.throwsClause)\(returnType) {
     \(body.indented())
     }
     """
