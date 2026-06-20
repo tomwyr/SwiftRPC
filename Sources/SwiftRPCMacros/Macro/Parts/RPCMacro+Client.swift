@@ -7,6 +7,7 @@ extension RPCMacro {
     let inputsName = "\(protoName)Inputs"
     let outputsName = "\(protoName)Outputs"
     let access = proto.access.declarationPrefix
+    let serviceErrorType = proto.serviceErrorType
 
     var methodDecls = [String]()
 
@@ -20,7 +21,11 @@ extension RPCMacro {
         .map { "\($0.name): \($0.name)" }
         .joined(separator: ", ")
 
-      let sendCall = makeSendCall(method: method, outputsName: outputsName)
+      let sendCall = makeSendCall(
+        method: method,
+        outputsName: outputsName,
+        serviceErrorType: serviceErrorType,
+      )
 
       let returnType = method.isVoidReturn ? "" : " -> \(method.returnType)"
       let methodBody = """
@@ -33,18 +38,27 @@ extension RPCMacro {
     }
 
     let allMethods = methodDecls.map { $0.indented() }.joined(separator: "\n\n")
+    let storedProperties = "private let transport: any RPCTransport"
+
+    let transportInit = """
+      \(access)init(transport: any RPCTransport) {
+        self.transport = transport
+      }
+      """
+
+    let baseURLInit = """
+      \(access)init(baseURL: URL) {
+        self.transport = HTTPTransport(baseURL: baseURL)
+      }
+      """
 
     let source = """
       \(access)struct \(clientName): \(protoName), Sendable {
-        private let transport: any RPCTransport
+      \(storedProperties.indented())
 
-        \(access)init(transport: any RPCTransport) {
-          self.transport = transport
-        }
+      \(transportInit.indented())
 
-        \(access)init(baseURL: URL) {
-          self.transport = HTTPTransport(baseURL: baseURL)
-        }
+      \(baseURLInit.indented())
 
       \(allMethods)
       }
@@ -54,50 +68,95 @@ extension RPCMacro {
   }
 }
 
-private func makeSendCall(method: RPCMethod, outputsName: String) -> String {
-  if !method.hasInOutParams {
-    return if method.isVoidReturn {
-      """
-      _ = try await transport.send(
-        route: "\(method.route)",
-        input: input,
-        outputType: \(outputsName).Nothing.self,
+private func makeSendCall(
+  method: RPCMethod,
+  outputsName: String,
+  serviceErrorType: String?,
+) -> String {
+  let sendCall =
+    if !method.hasInOutParams {
+      makeDirectSendCall(
+        method: method,
+        outputsName: outputsName,
+        serviceErrorType: serviceErrorType,
       )
-      """
     } else {
-      """
-      return try await transport.send(
-        route: "\(method.route)",
-        input: input,
-        outputType: \(method.returnType).self,
+      makeInOutSendCall(
+        method: method,
+        outputsName: outputsName,
+        serviceErrorType: serviceErrorType,
       )
-      """
     }
-  } else {
-    let outputType = "\(outputsName).\(method.outputTypeName)"
-    let mutationAssignments = method.inOutParams
-      .map { "\($0.name) = output.mutations.\($0.name)" }
-      .joined(separator: "\n")
 
-    return if method.isVoidReturn {
-      """
-      let output = try await transport.send(
-        route: "\(method.route)",
-        input: input,
-        outputType: \(outputType).self,
-      )
-      \(mutationAssignments)
-      """
-    } else {
-      """
-      let output = try await transport.send(
-        route: "\(method.route)",
-        input: input,
-        outputType: \(outputType).self,
-      )
-      \(mutationAssignments)
-      return output.returnValue
-      """
-    }
+  return sendCall
+}
+
+private func makeDirectSendCall(
+  method: RPCMethod,
+  outputsName: String,
+  serviceErrorType: String?,
+) -> String {
+  let serviceErrorArg = makeServiceErrorArg(serviceErrorType)
+  return if method.isVoidReturn {
+    """
+    _ = try await transport.send(
+      route: "\(method.route)",
+      input: input,
+      outputType: \(outputsName).Nothing.self,
+    \(serviceErrorArg)
+    )
+    """
+  } else {
+    """
+    return try await transport.send(
+      route: "\(method.route)",
+      input: input,
+      outputType: \(method.returnType).self,
+    \(serviceErrorArg)
+    )
+    """
+  }
+}
+
+private func makeInOutSendCall(
+  method: RPCMethod,
+  outputsName: String,
+  serviceErrorType: String?,
+) -> String {
+  let serviceErrorArg = makeServiceErrorArg(serviceErrorType)
+  let outputType = "\(outputsName).\(method.outputTypeName)"
+  let mutationAssignments = method.inOutParams
+    .map { "\($0.name) = output.mutations.\($0.name)" }
+    .joined(separator: "\n")
+
+  return if method.isVoidReturn {
+    """
+    let output = try await transport.send(
+      route: "\(method.route)",
+      input: input,
+      outputType: \(outputType).self,
+    \(serviceErrorArg)
+    )
+    \(mutationAssignments)
+    """
+  } else {
+    """
+    let output = try await transport.send(
+      route: "\(method.route)",
+      input: input,
+      outputType: \(outputType).self,
+    \(serviceErrorArg)
+    )
+    \(mutationAssignments)
+    return output.returnValue
+    """
+  }
+}
+
+private func makeServiceErrorArg(_ serviceErrorType: String?) -> String {
+  if let serviceErrorType {
+    "  serviceErrorType: \(serviceErrorType).self,"
+  } else {
+    ""
   }
 }

@@ -1,5 +1,7 @@
 import Foundation
 
+@testable import SwiftRPC
+
 struct AuthToken: Codable, Equatable {
   let token: String
   let expiresAt: Int
@@ -32,11 +34,13 @@ struct LogoutResponse: Codable, Equatable {
   let message: String
 }
 
-enum ServiceError: Error {
+enum UserError: RPCServiceError, Equatable {
   case invalidCredentials
   case profileNotFound
   case updateFailed
 }
+
+struct UnexpectedError: Error {}
 
 struct Movie: Codable, Equatable {
   let title: String

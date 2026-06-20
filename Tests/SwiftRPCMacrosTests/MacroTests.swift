@@ -68,6 +68,78 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func serviceErrorExpansion() {
+    assertMacro {
+      """
+      @RPC(serviceError: ServiceError.self)
+      protocol AccountService {
+        func load(id: String) async throws -> Account
+      }
+      """
+    } expansion: {
+      """
+      protocol AccountService {
+        func load(id: String) async throws -> Account
+      }
+
+      private struct AccountServiceInputs {
+        struct Load: Codable {
+          let id: String
+        }
+      }
+
+      private struct AccountServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct AccountServiceClient: AccountService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func load(id: String) async throws -> Account {
+          let input = AccountServiceInputs.Load(id: id)
+          return try await transport.send(
+            route: "/load",
+            input: input,
+            outputType: Account.self,
+            serviceErrorType: ServiceError.self,
+          )
+        }
+      }
+
+      struct AccountServiceServer<Handler: AccountService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "load") { (input: AccountServiceInputs.Load) in
+            do {
+              return try await self.handler.load(id: input.id)
+            } catch let error as RPCError {
+              throw error
+            } catch let error as RPCServiceErrorEnvelope {
+              throw error
+            } catch let error as ServiceError {
+              throw RPCServiceErrorEnvelope(error)
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
   @Test func multipleParametersWrappedIntoInputStruct() {
     assertMacro {
       """
@@ -2256,6 +2328,26 @@ struct RPCMacroDiagnosticsTests {
         func regular(id: String) -> String
              ┬──────
              ╰─ 🛑 @RPC: 'regular' must be declared 'async throws'
+      }
+      """
+    }
+  }
+
+  @Test func diagnosticOnInvalidServiceError() {
+    assertMacro {
+      """
+      @RPC(serviceError: ServiceError())
+      protocol BadService {
+        func load(id: String) async throws -> String
+      }
+      """
+    } diagnostics: {
+      """
+      @RPC(serviceError: ServiceError())
+                         ┬─────────────
+                         ╰─ 🛑 @RPC: 'serviceError' must be a service error type reference such as 'ServiceError.self'
+      protocol BadService {
+        func load(id: String) async throws -> String
       }
       """
     }

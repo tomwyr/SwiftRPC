@@ -212,6 +212,10 @@ protocol LogService {
 
 Use normal Swift error handling for service failures.
 
+### RPC Errors
+
+Throw `RPCError` when the server should return a specific RPC failure. Non-`RPCError` failures are converted to internal RPC failures before reaching the client.
+
 ```swift
 struct UserServiceHandler: UserService {
   func getUser(id: UUID) async throws -> User {
@@ -229,7 +233,41 @@ do {
 }
 ```
 
-Throw `RPCError` when the server should return a specific RPC failure. Non-`RPCError` failures are converted to internal RPC failures before reaching the client.
+### Error Propagation
+
+SwiftRPC offers a few ways to propagate errors from server to client, depending on the codebase's error-handling style.
+
+#### Protocol Service Errors
+
+Use `serviceError` when every method in a service should preserve one service-defined error type:
+
+```swift
+enum UserServiceError: RPCServiceError {
+  case invalidName
+}
+
+@RPC(serviceError: UserServiceError.self)
+protocol UserService {
+  func createUser(name: String) async throws -> User
+}
+
+struct UserServiceHandler: UserService {
+  func createUser(name: String) async throws -> User {
+    guard !name.isEmpty else {
+      throw UserServiceError.invalidName
+    }
+    return User(name: name)
+  }
+}
+
+do {
+  let user = try await client.createUser(name: "")
+} catch UserServiceError.invalidName {
+  print("Name is required")
+} catch let error as RPCError {
+  print(error.message)
+}
+```
 
 ## Transports
 

@@ -153,7 +153,7 @@ import Testing
     let session = MockTransportURLSession { request in
       let error = RPCError(code: .badRequest, message: "Invalid input")
       let response = makeResponse(for: request, status: 200)
-      let body = try rpcEncode(RPCResponse<String>.failure(error))
+      let body = try rpcEncode(RPCResponse<String>.failure(.core(error)))
       return (body, response)
     }
 
@@ -170,6 +170,32 @@ import Testing
     #expect(caughtError != nil)
     #expect(caughtError?.code == .badRequest)
     #expect(caughtError?.message == "Invalid input")
+  }
+
+  @Test func serviceError() async throws {
+    let serviceError = UserError.rejected(reason: "No")
+    let session = MockTransportURLSession { request in
+      let response = makeResponse(for: request, status: 200)
+      let body = try rpcEncode(
+        RPCResponse<String>.failure(.service(RPCServiceErrorEnvelope(serviceError)))
+      )
+      return (body, response)
+    }
+
+    let transport = makeHTTPTransport(
+      baseURL: "https://api.example.com", session: session,
+    )
+
+    let caughtError = await #expect(throws: UserError.self) {
+      try await transport.send(
+        route: "/test",
+        input: "input",
+        outputType: String.self,
+        serviceErrorType: UserError.self,
+      )
+    }
+
+    #expect(caughtError == serviceError)
   }
 
   @Test func uncaughtError() async throws {

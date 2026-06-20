@@ -15,7 +15,7 @@ extension RPCMacro: ExtensionMacro {
       return []
     }
 
-    let proto = try protocolInfo(from: node, attachedTo: declaration)
+    let proto = try protocolInfo(from: node, attachedTo: declaration, config: config)
 
     return [
       try makeInlineServerHandlerFactory(proto: proto)

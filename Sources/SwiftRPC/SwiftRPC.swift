@@ -1,3 +1,4 @@
+/// Generates an RPC client and server for an async throwing service protocol.
 @attached(
   peer,
   names: suffixed(Client), suffixed(Server),
@@ -8,6 +9,7 @@ public macro RPC(
   inlineHandler: Bool = false,
   varargMaxArity: Int = 10,
   varargOverflowBehavior: RPCVarargOverflowBehavior = .reject,
+  serviceError: (any RPCServiceError.Type)? = nil,
 ) =
   #externalMacro(module: "SwiftRPCMacros", type: "RPCMacro")
 

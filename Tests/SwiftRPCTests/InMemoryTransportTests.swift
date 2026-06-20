@@ -107,6 +107,26 @@ import Testing
     }
   }
 
+  @Test func serviceError() async throws {
+    let serviceError = UserError.rejected(reason: "No")
+    let registry = InMemoryHandlerRegistry()
+    registry.register(method: "process") { (_: String) -> String in
+      throw RPCServiceErrorEnvelope(serviceError)
+    }
+    let transport = InMemoryTransport(from: registry)
+
+    let caughtError = await #expect(throws: UserError.self) {
+      try await transport.send(
+        route: "/process",
+        input: "input",
+        outputType: String.self,
+        serviceErrorType: UserError.self,
+      )
+    }
+
+    #expect(caughtError == serviceError)
+  }
+
   @Test func concurrentSends() async throws {
     let registry = InMemoryHandlerRegistry()
     registry.register(method: "double") { (input: Int) -> Int in

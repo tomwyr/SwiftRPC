@@ -59,11 +59,11 @@ class MockUserService: UserService, @unchecked Sendable {
     }
 
     if shouldFailLogin {
-      throw ServiceError.invalidCredentials
+      throw UserError.invalidCredentials
     }
 
     guard let result = loginResult else {
-      throw ServiceError.profileNotFound
+      throw UserError.profileNotFound
     }
     return result
   }
@@ -71,7 +71,7 @@ class MockUserService: UserService, @unchecked Sendable {
   func logout(token: AuthToken) async throws -> LogoutResponse {
     logoutCalls += 1
     guard let result = logoutResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
   }
@@ -79,7 +79,7 @@ class MockUserService: UserService, @unchecked Sendable {
   func register(email: String, password: String, profile: UserProfile) async throws -> UserID {
     registerCalls += 1
     guard let result = registerResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
   }
@@ -89,7 +89,7 @@ class MockUserService: UserService, @unchecked Sendable {
     getProfileUserIds.append(userId)
 
     guard let profile = profile else {
-      throw ServiceError.profileNotFound
+      throw UserError.profileNotFound
     }
 
     return profile
@@ -103,7 +103,7 @@ class MockUserService: UserService, @unchecked Sendable {
   func validateSession() async throws -> Bool {
     validateSessionCalls += 1
     guard let result = validateSessionResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
   }
@@ -111,7 +111,7 @@ class MockUserService: UserService, @unchecked Sendable {
   func batchDeleteUserIds(userIds: [UserID]) async throws -> Int {
     batchDeleteUserIdsCalls += 1
     guard let result = batchDeleteUserIdsResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
   }
@@ -121,7 +121,7 @@ class MockUserService: UserService, @unchecked Sendable {
     upgradeAccountUserIds.append(userId)
     upgradedAccountTypes.append(newType)
     guard let result = upgradeAccountResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
   }
@@ -130,7 +130,7 @@ class MockUserService: UserService, @unchecked Sendable {
     getAccountTypeCalls += 1
     getAccountTypeUserIds.append(userId)
     guard let result = getAccountTypeResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
   }
@@ -152,7 +152,7 @@ class MockUserService: UserService, @unchecked Sendable {
     updateSettingsSessionTimeouts.append(sessionTimeout)
 
     guard let result = updateSettingsResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
 
     return result
@@ -173,9 +173,34 @@ class MockEchoService: EchoService, @unchecked Sendable {
   func ping() async throws -> String {
     pingCalls += 1
     guard let result = pingResult else {
-      throw ServiceError.updateFailed
+      throw UserError.updateFailed
     }
     return result
+  }
+}
+
+class MockUserErrorService: UserErrorService, @unchecked Sendable {
+  enum FailureMode {
+    case none
+    case serviceError
+    case rpcError
+    case unknownError
+  }
+
+  var failureMode = FailureMode.none
+  var authToken = AuthToken(token: "service-token", expiresAt: 3600)
+
+  func authenticate(username: String, password: String) async throws -> AuthToken {
+    switch failureMode {
+    case .none:
+      return authToken
+    case .serviceError:
+      throw UserError.invalidCredentials
+    case .rpcError:
+      throw RPCError(code: .unauthorized, message: "Unauthorized")
+    case .unknownError:
+      throw UnexpectedError()
+    }
   }
 }
 

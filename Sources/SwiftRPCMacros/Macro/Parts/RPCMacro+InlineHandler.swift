@@ -67,36 +67,40 @@ private func makeVariadicInlineHandlerCall(
   config: RPCMacroConfig,
 ) -> String {
   let cases = (0...config.varargMaxArity).map { arity in
-    """
-    case \(arity):
-    \(makeVariadicInlineHandlerCall(
+    let handlerCall = makeVariadicInlineHandlerCall(
       method: method,
       variadicParam: variadicParam,
       variadicArity: arity,
       explicitReturn: true
-    ).indented())
+    )
+
+    return """
+    case \(arity):
+    \(handlerCall.indented())
     """
   }.joined(separator: "\n")
 
-  let defaultCase =
-    switch config.varargOverflowBehavior {
-    case .reject:
-      """
+  let defaultCase: String
+  switch config.varargOverflowBehavior {
+  case .reject:
+    defaultCase = """
       default:
         throw RPCError(
           code: .badRequest,
           message: "Variadic parameter '\(variadicParam.name)' exceeds the maximum of \(config.varargMaxArity) arguments",
         )
       """
-    case .truncate:
-      """
+  case .truncate:
+    let handlerCall = makeVariadicInlineHandlerCall(
+      method: method,
+      variadicParam: variadicParam,
+      variadicArity: config.varargMaxArity,
+      explicitReturn: true
+    )
+
+    defaultCase = """
       default:
-      \(makeVariadicInlineHandlerCall(
-        method: method,
-        variadicParam: variadicParam,
-        variadicArity: config.varargMaxArity,
-        explicitReturn: true
-      ).indented())
+      \(handlerCall.indented())
       """
   }
 

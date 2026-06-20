@@ -39,6 +39,29 @@ public struct InMemoryTransport: RPCTransport {
     input: Input,
     outputType: Output.Type,
   ) async throws -> Output {
+    try await send(route: route, input: input, outputType: outputType) { serviceError in
+      serviceError
+    }
+  }
+
+  /// Sends an in-memory RPC request that may return a typed service-defined error.
+  public func send<Input: Codable, Output: Codable, ServiceError: RPCServiceError>(
+    route: String,
+    input: Input,
+    outputType: Output.Type,
+    serviceErrorType: ServiceError.Type,
+  ) async throws -> Output {
+    try await send(route: route, input: input, outputType: outputType) { serviceError in
+      try serviceError.unwrap(as: serviceErrorType)
+    }
+  }
+
+  private func send<Input: Codable, Output: Codable>(
+    route: String,
+    input: Input,
+    outputType: Output.Type,
+    mapServiceError: (RPCServiceErrorEnvelope) throws -> any Error,
+  ) async throws -> Output {
     // Remove leading "/" from route to match registered method name.
     let method = String(route.dropFirst())
 
@@ -51,6 +74,8 @@ public struct InMemoryTransport: RPCTransport {
       result = try await handler(input)
     } catch let rpcError as RPCError {
       throw rpcError
+    } catch let serviceError as RPCServiceErrorEnvelope {
+      throw try mapServiceError(serviceError)
     } catch {
       throw RPCError(code: .internalError, message: error.outMessage)
     }

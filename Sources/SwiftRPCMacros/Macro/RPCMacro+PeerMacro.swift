@@ -8,7 +8,7 @@ extension RPCMacro: PeerMacro {
     in context: some MacroExpansionContext,
   ) throws -> [DeclSyntax] {
     let config = try RPCMacroConfig(from: node)
-    let proto = try protocolInfo(from: node, attachedTo: declaration)
+    let proto = try protocolInfo(from: node, attachedTo: declaration, config: config)
 
     var declarations = [
       try makeInputTypes(proto: proto),

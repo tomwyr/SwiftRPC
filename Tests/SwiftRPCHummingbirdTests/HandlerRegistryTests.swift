@@ -198,9 +198,11 @@ import Testing
         switch responseBody {
         case .success:
           Issue.record("Expected failure but got success")
-        case .failure(let error):
+        case .failure(.core(let error)):
           #expect(error.code == .notFound)
           #expect(error.message == "Resource not found")
+        case .failure(.service):
+          Issue.record("Expected core failure but got service failure")
         }
       }
     }
@@ -233,9 +235,11 @@ import Testing
           switch responseBody {
           case .success:
             Issue.record("Expected failure but got success")
-          case .failure(let error):
+          case .failure(.core(let error)):
             #expect(error.code == .internalError)
             #expect(error.message == message)
+          case .failure(.service):
+            Issue.record("Expected core failure but got service failure")
           }
         }
       }
@@ -266,8 +270,10 @@ import Testing
           switch responseBody {
           case .success:
             Issue.record("Expected failure but got success for \(errorCode)")
-          case .failure(let error):
+          case .failure(.core(let error)):
             #expect(error.code == errorCode)
+          case .failure(.service):
+            Issue.record("Expected core failure but got service failure for \(errorCode)")
           }
         }
       }

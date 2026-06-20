@@ -11,6 +11,7 @@ enum RPCMacroError: Error, CustomStringConvertible {
   case returnTypeMustBeCodable(name: String)
   case invalidVarargMaxArity(max: Int)
   case invalidVarargOverflowBehavior
+  case invalidServiceError
 
   var description: String {
     switch self {
@@ -34,6 +35,8 @@ enum RPCMacroError: Error, CustomStringConvertible {
       "@RPC: 'varargMaxArity' must be an integer literal in the range 1...\(max)"
     case .invalidVarargOverflowBehavior:
       "@RPC: 'varargOverflowBehavior' must be '.reject' or '.truncate'"
+    case .invalidServiceError:
+      "@RPC: 'serviceError' must be a service error type reference such as 'ServiceError.self'"
     }
   }
 }

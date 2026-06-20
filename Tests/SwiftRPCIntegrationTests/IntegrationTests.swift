@@ -392,6 +392,59 @@ extension IntegrationTests {
       #expect(error?.message == "Invalid credentials provided")
     }
   }
+
+  @Test(arguments: runners)
+  func serviceErrorWithTypedServiceError(runner: IntegrationTestRunner) async throws {
+    let handler = MockUserErrorService()
+    handler.failureMode = .serviceError
+    let server = UserErrorServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = UserErrorServiceClient(transport: transport)
+
+      let error = await #expect(throws: UserError.self) {
+        try await client.authenticate(username: "alice", password: "wrong")
+      }
+
+      #expect(error == .invalidCredentials)
+    }
+  }
+
+  @Test(arguments: runners)
+  func rpcErrorWithTypedServiceError(runner: IntegrationTestRunner) async throws {
+    let handler = MockUserErrorService()
+    handler.failureMode = .rpcError
+    let server = UserErrorServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = UserErrorServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCError.self) {
+        try await client.authenticate(username: "alice", password: "wrong")
+      }
+
+      #expect(error?.code == .unauthorized)
+      #expect(error?.message == "Unauthorized")
+    }
+  }
+
+  @Test(arguments: runners)
+  func unknownErrorWithTypedServiceError(runner: IntegrationTestRunner) async throws {
+    let handler = MockUserErrorService()
+    handler.failureMode = .unknownError
+    let server = UserErrorServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = UserErrorServiceClient(transport: transport)
+
+      let error = await #expect(throws: RPCError.self) {
+        try await client.authenticate(username: "alice", password: "wrong")
+      }
+
+      #expect(error?.code == .internalError)
+      #expect(error?.message == "Internal error")
+    }
+  }
 }
 
 // Inline handler tests

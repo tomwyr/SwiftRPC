@@ -20,3 +20,7 @@ enum AccountType: String, Codable, Equatable {
   case premium
   case enterprise
 }
+
+enum UserError: RPCServiceError, Equatable {
+  case rejected(reason: String)
+}

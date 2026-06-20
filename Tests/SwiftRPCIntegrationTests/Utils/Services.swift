@@ -26,6 +26,11 @@ protocol EchoService {
   func ping() async throws -> String
 }
 
+@RPC(serviceError: UserError.self)
+protocol UserErrorService {
+  func authenticate(username: String, password: String) async throws -> AuthToken
+}
+
 @RPC(inlineHandler: true)
 protocol MovieService {
   func search(query: String) async throws -> Movie

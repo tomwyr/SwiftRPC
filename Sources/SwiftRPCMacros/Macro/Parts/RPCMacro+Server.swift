@@ -10,6 +10,7 @@ extension RPCMacro {
     let inputsName = "\(protoName)Inputs"
     let outputsName = "\(protoName)Outputs"
     let access = proto.access.declarationPrefix
+    let serviceErrorType = proto.serviceErrorType
 
     var methodRegistrations = [String]()
 
@@ -23,26 +24,42 @@ extension RPCMacro {
             config: config,
           )
         } else {
-          makeHandlerCall(method: method, outputsName: outputsName)
+          makeHandlerCall(
+            method: method,
+            outputsName: outputsName,
+            explicitReturn: serviceErrorType != nil,
+          )
+        }
+
+      let registrationBody =
+        if let serviceErrorType {
+          makeErrorGuarded(handlerCall: handlerCall, serviceErrorType: serviceErrorType)
+        } else {
+          handlerCall
         }
 
       let registration = """
         registry.register(method: "\(method.name)") { (input: \(inputsName).\(method.inputTypeName)) in
-        \(handlerCall.indented())
+        \(registrationBody.indented())
         }
         """
       methodRegistrations.append(registration)
     }
 
     let allMethods = methodRegistrations.map { $0.indented(times: 2) }.joined(separator: "\n\n")
+    let storedProperties = "private let handler: Handler"
+
+    let serverInit = """
+      \(access)init(handler: Handler) {
+        self.handler = handler
+      }
+      """
 
     let source = """
       \(access)struct \(serverName)<Handler: \(protoName) & Sendable>: RPCServer {
-        private let handler: Handler
+      \(storedProperties.indented())
 
-        \(access)init(handler: Handler) {
-          self.handler = handler
-        }
+      \(serverInit.indented())
 
         \(access)func register(on registry: any RPCHandlerRegistry) {
       \(allMethods)
@@ -54,6 +71,20 @@ extension RPCMacro {
   }
 }
 
+private func makeErrorGuarded(handlerCall: String, serviceErrorType: String) -> String {
+  """
+  do {
+  \(handlerCall.indented())
+  } catch let error as RPCError {
+    throw error
+  } catch let error as RPCServiceErrorEnvelope {
+    throw error
+  } catch let error as \(serviceErrorType) {
+    throw RPCServiceErrorEnvelope(error)
+  }
+  """
+}
+
 private func makeVariadicHandlerCall(
   method: RPCMethod,
   variadicParam: RPCParameter,
@@ -61,23 +92,28 @@ private func makeVariadicHandlerCall(
   config: RPCMacroConfig,
 ) -> String {
   let cases = (0...config.varargMaxArity).map { arity in
-    """
-    case \(arity):
-    \(makeHandlerCallSource(
+    let callArgs = getVariadicCallArgs(
+      method: method,
+      variadicParam: variadicParam,
+      variadicArity: arity,
+    )
+    let handlerCall = makeHandlerCallSource(
       method: method,
       outputsName: outputsName,
-      callArgs: getVariadicCallArgs(
-        method: method,
-        variadicParam: variadicParam, variadicArity: arity,
-      ),
+      callArgs: callArgs,
       explicitReturn: true,
-    ).indented())
-    """
+    )
+
+    return """
+      case \(arity):
+      \(handlerCall.indented())
+      """
   }.joined(separator: "\n")
 
-  let defaultCase =
-    switch config.varargOverflowBehavior {
-    case .reject:
+  let defaultCase: String
+  switch config.varargOverflowBehavior {
+  case .reject:
+    defaultCase =
       """
       default:
         throw RPCError(
@@ -85,20 +121,25 @@ private func makeVariadicHandlerCall(
           message: "Variadic parameter '\(variadicParam.name)' exceeds the maximum of \(config.varargMaxArity) arguments",
         )
       """
-    case .truncate:
+  case .truncate:
+    let callArgs = getVariadicCallArgs(
+      method: method,
+      variadicParam: variadicParam,
+      variadicArity: config.varargMaxArity,
+    )
+    let handlerCall = makeHandlerCallSource(
+      method: method,
+      outputsName: outputsName,
+      callArgs: callArgs,
+      explicitReturn: true,
+    )
+
+    defaultCase =
       """
       default:
-      \(makeHandlerCallSource(
-        method: method,
-        outputsName: outputsName,
-        callArgs: getVariadicCallArgs(
-          method: method,
-          variadicParam: variadicParam, variadicArity: config.varargMaxArity,
-        ),
-        explicitReturn: true,
-      ).indented())
+      \(handlerCall.indented())
       """
-    }
+  }
 
   let inOutVariables = makeInOutVariables(method: method)
 

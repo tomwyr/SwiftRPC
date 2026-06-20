@@ -6,6 +6,7 @@ public struct RPCMacro {
   static func protocolInfo(
     from node: AttributeSyntax,
     attachedTo declaration: some SyntaxProtocol,
+    config: RPCMacroConfig,
   ) throws -> RPCProtocolInfo {
     let proto = try validate(declaration: declaration, diagnosticNode: node)
 
@@ -20,6 +21,7 @@ public struct RPCMacro {
       name: proto.name.text,
       access: access,
       methods: methods,
+      serviceErrorType: config.serviceErrorType,
     )
   }
 }
@@ -48,5 +50,20 @@ extension ReturnClauseSyntax? {
   func isVoidLike() -> Bool {
     guard let self else { return true }
     return self.isVoidLike()
+  }
+}
+
+extension ExprSyntax {
+  var serviceErrorTypeReference: String? {
+    guard
+      let memberAccess = self.as(MemberAccessExprSyntax.self),
+      memberAccess.declName.baseName.text == "self",
+      let base = memberAccess.base
+    else {
+      return nil
+    }
+
+    let typeName = base.trimmedDescription
+    return typeName.isEmpty ? nil : typeName
   }
 }

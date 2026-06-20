@@ -6,6 +6,7 @@ struct RPCMacroConfig {
   var inlineHandler = false
   var varargMaxArity = 10
   var varargOverflowBehavior = RPCVarargOverflowBehavior.reject
+  var serviceErrorType: String?
 
   init(from node: AttributeSyntax) throws {
     guard case .argumentList(let args) = node.arguments else {
@@ -39,6 +40,11 @@ struct RPCMacroConfig {
           try throwDiagnostics(node: arg.expression, message: .invalidVarargOverflowBehavior)
           continue
         }
+      case "serviceError":
+        guard let serviceErrorType = arg.expression.serviceErrorTypeReference else {
+          try throwDiagnostics(node: arg.expression, message: .invalidServiceError)
+        }
+        self.serviceErrorType = serviceErrorType
       default:
         continue
       }
@@ -55,6 +61,7 @@ struct RPCProtocolInfo {
   let name: String
   let access: RPCAccessLevel
   let methods: [RPCMethod]
+  let serviceErrorType: String?
 }
 
 enum RPCAccessLevel: String {

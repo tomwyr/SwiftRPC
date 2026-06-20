@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0 - Unreleased
+
+- Added protocol-level service error transport with `@RPC(serviceError:)`.
+
 ## 0.6.0
 
 - Added variadic parameters support.
