@@ -102,7 +102,10 @@ private func makeSendCall(
     )
   }
 
-  return sendCall
+  return makeUntypedThrowingSendCall(
+    sendCall,
+    serviceErrorType: method.responseServiceErrorType(default: serviceErrorType),
+  )
 }
 
 private func makeDirectSendCall(
@@ -173,6 +176,32 @@ private func makeServiceErrorArg(_ serviceErrorType: String?) -> String {
   } else {
     ""
   }
+}
+
+private func makeUntypedThrowingSendCall(
+  _ sendCall: String,
+  serviceErrorType: String?,
+) -> String {
+  let serviceErrorCatch =
+    if let serviceErrorType {
+      """
+      } catch let error as \(serviceErrorType) {
+        throw error
+      """
+    } else {
+      ""
+    }
+
+  return """
+    do {
+    \(sendCall.indented())
+    } catch let error as RPCError {
+      throw error
+    \(serviceErrorCatch)
+    } catch {
+      throw RPCError(code: .internalError, message: error.outMessage)
+    }
+    """
 }
 
 private func makeTypedFailureSendCall(

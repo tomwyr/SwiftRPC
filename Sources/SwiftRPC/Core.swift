@@ -49,6 +49,13 @@ public struct RPCError: Error, LocalizedError, Codable, Sendable {
   }
 }
 
+public extension Error {
+  /// Message to expose when converting an arbitrary error into an RPC failure.
+  var outMessage: String {
+    (self as? LocalizedError)?.errorDescription ?? "Internal error"
+  }
+}
+
 /// A service-defined error that can be transported through RPC failures.
 public protocol RPCServiceError: Error, Codable, Sendable {}
 

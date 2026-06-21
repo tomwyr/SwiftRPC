@@ -47,9 +47,3 @@ extension RPCServer {
     self.register(on: HummingbirdHandlerRegistry(router: router))
   }
 }
-
-extension Error {
-  var outMessage: String {
-    (self as? LocalizedError)?.errorDescription ?? "Internal error"
-  }
-}

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 - Unreleased
+## 0.7.0
 
 - Added protocol-level service error transport with `@RPC(serviceError:)`.
 - Added typed RPC failures with `async throws(RPCFailure<ServiceError>)`.

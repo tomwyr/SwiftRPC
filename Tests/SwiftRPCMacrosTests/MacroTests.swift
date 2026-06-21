@@ -43,11 +43,17 @@ struct RPCMacroTests {
 
         func ping(message: String) async throws -> String {
           let input = EchoServiceInputs.Ping(message: message)
-          return try await transport.send(
-            route: "/ping",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/ping",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -106,12 +112,20 @@ struct RPCMacroTests {
 
         func load(id: String) async throws -> Account {
           let input = AccountServiceInputs.Load(id: id)
-          return try await transport.send(
-            route: "/load",
-            input: input,
-            outputType: Account.self,
-            serviceErrorType: ServiceError.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/load",
+              input: input,
+              outputType: Account.self,
+              serviceErrorType: ServiceError.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch let error as ServiceError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -521,11 +535,17 @@ struct RPCMacroTests {
 
         func createPost(title: String, body: String, authorId: UUID) async throws -> Post {
           let input = PostServiceInputs.CreatePost(title: title, body: body, authorId: authorId)
-          return try await transport.send(
-            route: "/createPost",
-            input: input,
-            outputType: Post.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/createPost",
+              input: input,
+              outputType: Post.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -591,13 +611,19 @@ struct RPCMacroTests {
 
         func normalize(name: inout String) async throws -> Bool {
           let input = ProfileServiceInputs.Normalize(name: name)
-          let output = try await transport.send(
-            route: "/normalize",
-            input: input,
-            outputType: ProfileServiceOutputs.NormalizeOutput.self,
-          )
-          name = output.mutations.name
-          return output.returnValue
+          do {
+            let output = try await transport.send(
+              route: "/normalize",
+              input: input,
+              outputType: ProfileServiceOutputs.NormalizeOutput.self,
+            )
+            name = output.mutations.name
+            return output.returnValue
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -669,13 +695,19 @@ struct RPCMacroTests {
 
         func swap(left: inout String, right: inout String) async throws {
           let input = SwapServiceInputs.Swap(left: left, right: right)
-          let output = try await transport.send(
-            route: "/swap",
-            input: input,
-            outputType: SwapServiceOutputs.SwapOutput.self,
-          )
-          left = output.mutations.left
-          right = output.mutations.right
+          do {
+            let output = try await transport.send(
+              route: "/swap",
+              input: input,
+              outputType: SwapServiceOutputs.SwapOutput.self,
+            )
+            left = output.mutations.left
+            right = output.mutations.right
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -747,13 +779,19 @@ struct RPCMacroTests {
 
         func format(id: UUID, value: inout String) async throws -> String {
           let input = FormatServiceInputs.Format(id: id, value: value)
-          let output = try await transport.send(
-            route: "/format",
-            input: input,
-            outputType: FormatServiceOutputs.FormatOutput.self,
-          )
-          value = output.mutations.value
-          return output.returnValue
+          do {
+            let output = try await transport.send(
+              route: "/format",
+              input: input,
+              outputType: FormatServiceOutputs.FormatOutput.self,
+            )
+            value = output.mutations.value
+            return output.returnValue
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -816,11 +854,17 @@ struct RPCMacroTests {
 
         func ping() async throws -> String {
           let input = HealthServiceInputs.Ping()
-          return try await transport.send(
-            route: "/ping",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/ping",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -880,11 +924,17 @@ struct RPCMacroTests {
 
         func collect(prefix: String, messages: String...) async throws -> [String] {
           let input = LogServiceInputs.Collect(prefix: prefix, messages: messages)
-          return try await transport.send(
-            route: "/collect",
-            input: input,
-            outputType: [String].self,
-          )
+          do {
+            return try await transport.send(
+              route: "/collect",
+              input: input,
+              outputType: [String].self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -955,11 +1005,17 @@ struct RPCMacroTests {
 
         func collect(messages: String...) async throws -> [String] {
           let input = LogServiceInputs.Collect(messages: messages)
-          return try await transport.send(
-            route: "/collect",
-            input: input,
-            outputType: [String].self,
-          )
+          do {
+            return try await transport.send(
+              route: "/collect",
+              input: input,
+              outputType: [String].self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1027,11 +1083,17 @@ struct RPCMacroTests {
 
         func count(messages: String...) async throws -> Int {
           let input = LogServiceInputs.Count(messages: messages)
-          return try await transport.send(
-            route: "/count",
-            input: input,
-            outputType: Int.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/count",
+              input: input,
+              outputType: Int.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1118,11 +1180,17 @@ struct RPCMacroTests {
 
         func collect(messages: String...) async throws -> [String] {
           let input = LogServiceInputs.Collect(messages: messages)
-          return try await transport.send(
-            route: "/collect",
-            input: input,
-            outputType: [String].self,
-          )
+          do {
+            return try await transport.send(
+              route: "/collect",
+              input: input,
+              outputType: [String].self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1219,11 +1287,17 @@ struct RPCMacroTests {
 
         func execute(command: String) async throws {
           let input = CommandServiceInputs.Execute(command: command)
-          _ = try await transport.send(
-            route: "/execute",
-            input: input,
-            outputType: CommandServiceOutputs.Nothing.self,
-          )
+          do {
+            _ = try await transport.send(
+              route: "/execute",
+              input: input,
+              outputType: CommandServiceOutputs.Nothing.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1300,38 +1374,62 @@ struct RPCMacroTests {
 
         func getData(id: String) async throws -> Data {
           let input = HybridServiceInputs.GetData(id: id)
-          return try await transport.send(
-            route: "/getData",
-            input: input,
-            outputType: Data.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/getData",
+              input: input,
+              outputType: Data.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func setData(id: String, value: Data) async throws {
           let input = HybridServiceInputs.SetData(id: id, value: value)
-          _ = try await transport.send(
-            route: "/setData",
-            input: input,
-            outputType: HybridServiceOutputs.Nothing.self,
-          )
+          do {
+            _ = try await transport.send(
+              route: "/setData",
+              input: input,
+              outputType: HybridServiceOutputs.Nothing.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func getStatus() async throws -> String {
           let input = HybridServiceInputs.GetStatus()
-          return try await transport.send(
-            route: "/getStatus",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/getStatus",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func clearCache() async throws {
           let input = HybridServiceInputs.ClearCache()
-          _ = try await transport.send(
-            route: "/clearCache",
-            input: input,
-            outputType: HybridServiceOutputs.Nothing.self,
-          )
+          do {
+            _ = try await transport.send(
+              route: "/clearCache",
+              input: input,
+              outputType: HybridServiceOutputs.Nothing.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1425,11 +1523,17 @@ struct RPCMacroTests {
 
         func processItems(items: [CustomItem]) async throws -> [ResultType] {
           let input = ComplexServiceInputs.ProcessItems(items: items)
-          return try await transport.send(
-            route: "/processItems",
-            input: input,
-            outputType: [ResultType].self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processItems",
+              input: input,
+              outputType: [ResultType].self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1506,38 +1610,62 @@ struct RPCMacroTests {
 
         func processDate(date: Date) async throws -> Date {
           let input = BuiltInServiceInputs.ProcessDate(date: date)
-          return try await transport.send(
-            route: "/processDate",
-            input: input,
-            outputType: Date.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processDate",
+              input: input,
+              outputType: Date.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func processURL(url: URL) async throws -> URL {
           let input = BuiltInServiceInputs.ProcessURL(url: url)
-          return try await transport.send(
-            route: "/processURL",
-            input: input,
-            outputType: URL.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processURL",
+              input: input,
+              outputType: URL.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func processUUID(uuid: UUID) async throws -> UUID {
           let input = BuiltInServiceInputs.ProcessUUID(uuid: uuid)
-          return try await transport.send(
-            route: "/processUUID",
-            input: input,
-            outputType: UUID.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processUUID",
+              input: input,
+              outputType: UUID.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func processData(data: Data) async throws -> Data {
           let input = BuiltInServiceInputs.ProcessData(data: data)
-          return try await transport.send(
-            route: "/processData",
-            input: input,
-            outputType: Data.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processData",
+              input: input,
+              outputType: Data.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1612,11 +1740,17 @@ struct RPCMacroTests {
 
         func firstMethod() async throws -> String {
           let input = FirstServiceInputs.FirstMethod()
-          return try await transport.send(
-            route: "/firstMethod",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/firstMethod",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1660,11 +1794,17 @@ struct RPCMacroTests {
 
         func secondMethod() async throws -> Int {
           let input = SecondServiceInputs.SecondMethod()
-          return try await transport.send(
-            route: "/secondMethod",
-            input: input,
-            outputType: Int.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/secondMethod",
+              input: input,
+              outputType: Int.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1789,20 +1929,32 @@ struct RPCMacroTests {
 
         func authenticateUser(email: String, password: String) async throws -> AuthToken {
           let input = UserAuthProtocolInputs.AuthenticateUser(email: email, password: password)
-          return try await transport.send(
-            route: "/authenticateUser",
-            input: input,
-            outputType: AuthToken.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/authenticateUser",
+              input: input,
+              outputType: AuthToken.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func logoutUser(userId: UUID) async throws {
           let input = UserAuthProtocolInputs.LogoutUser(userId: userId)
-          _ = try await transport.send(
-            route: "/logoutUser",
-            input: input,
-            outputType: UserAuthProtocolOutputs.Nothing.self,
-          )
+          do {
+            _ = try await transport.send(
+              route: "/logoutUser",
+              input: input,
+              outputType: UserAuthProtocolOutputs.Nothing.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1866,11 +2018,17 @@ struct RPCMacroTests {
 
         private func processData(id: String) async throws -> String {
           let input = PrivateServiceInputs.ProcessData(id: id)
-          return try await transport.send(
-            route: "/processData",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processData",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1929,11 +2087,17 @@ struct RPCMacroTests {
 
         func fetchData(id: String) async throws -> String {
           let input = InternalServiceInputs.FetchData(id: id)
-          return try await transport.send(
-            route: "/fetchData",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/fetchData",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -1992,11 +2156,17 @@ struct RPCMacroTests {
 
         public func retrieveData(id: String) async throws -> String {
           let input = PublicServiceInputs.RetrieveData(id: id)
-          return try await transport.send(
-            route: "/retrieveData",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/retrieveData",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2055,11 +2225,17 @@ struct RPCMacroTests {
 
         package func fetchData(id: String) async throws -> String {
           let input = PackageServiceInputs.FetchData(id: id)
-          return try await transport.send(
-            route: "/fetchData",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/fetchData",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2139,29 +2315,47 @@ struct RPCMacroTests {
 
         func greet(name: String?) async throws -> String? {
           let input = OptionalServiceInputs.Greet(name: name)
-          return try await transport.send(
-            route: "/greet",
-            input: input,
-            outputType: String?.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/greet",
+              input: input,
+              outputType: String?.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func processNumbers(numbers: [Int]?) async throws -> [Int]? {
           let input = OptionalServiceInputs.ProcessNumbers(numbers: numbers)
-          return try await transport.send(
-            route: "/processNumbers",
-            input: input,
-            outputType: [Int]?.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/processNumbers",
+              input: input,
+              outputType: [Int]?.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
 
         func updateUser(user: User?) async throws -> User? {
           let input = OptionalServiceInputs.UpdateUser(user: user)
-          return try await transport.send(
-            route: "/updateUser",
-            input: input,
-            outputType: User?.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/updateUser",
+              input: input,
+              outputType: User?.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2230,11 +2424,17 @@ struct RPCMacroTests {
 
         func search(query: String?, filters: [String]?, limit: Int?) async throws -> [String] {
           let input = SearchServiceInputs.Search(query: query, filters: filters, limit: limit)
-          return try await transport.send(
-            route: "/search",
-            input: input,
-            outputType: [String].self,
-          )
+          do {
+            return try await transport.send(
+              route: "/search",
+              input: input,
+              outputType: [String].self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2293,11 +2493,17 @@ struct RPCMacroTests {
 
         func ping(message: String) async throws -> String {
           let input = EchoServiceInputs.Ping(message: message)
-          return try await transport.send(
-            route: "/ping",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/ping",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2356,11 +2562,17 @@ struct RPCMacroTests {
 
         func ping(message: String) async throws -> String {
           let input = EchoServiceInputs.Ping(message: message)
-          return try await transport.send(
-            route: "/ping",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/ping",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2444,13 +2656,19 @@ struct RPCMacroTests {
 
         func normalize(name: inout String) async throws -> Bool {
           let input = ProfileServiceInputs.Normalize(name: name)
-          let output = try await transport.send(
-            route: "/normalize",
-            input: input,
-            outputType: ProfileServiceOutputs.NormalizeOutput.self,
-          )
-          name = output.mutations.name
-          return output.returnValue
+          do {
+            let output = try await transport.send(
+              route: "/normalize",
+              input: input,
+              outputType: ProfileServiceOutputs.NormalizeOutput.self,
+            )
+            name = output.mutations.name
+            return output.returnValue
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 
@@ -2532,11 +2750,17 @@ struct RPCMacroTests {
 
         public func ping(message: String) async throws -> String {
           let input = PublicInlineServiceInputs.Ping(message: message)
-          return try await transport.send(
-            route: "/ping",
-            input: input,
-            outputType: String.self,
-          )
+          do {
+            return try await transport.send(
+              route: "/ping",
+              input: input,
+              outputType: String.self,
+            )
+          } catch let error as RPCError {
+            throw error
+          } catch {
+            throw RPCError(code: .internalError, message: error.outMessage)
+          }
         }
       }
 

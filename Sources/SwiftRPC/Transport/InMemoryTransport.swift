@@ -98,9 +98,3 @@ extension InMemoryHandlerRegistry {
     handlers
   }
 }
-
-extension Error {
-  var outMessage: String {
-    (self as? LocalizedError)?.errorDescription ?? "Internal error"
-  }
-}

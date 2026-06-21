@@ -446,6 +446,31 @@ extension IntegrationTests {
     }
   }
 
+  @Test func serviceErrorFromTransportError() async {
+    let error = RPCError(code: .unauthorized, message: "Unauthorized")
+    let transport = ThrowingTransport(failure: .rpc(error))
+    let client = UserErrorServiceClient(transport: transport)
+
+    let caughtError = await #expect(throws: RPCError.self) {
+      try await client.authenticate(username: "alice", password: "wrong")
+    }
+
+    #expect(caughtError?.code == .unauthorized)
+    #expect(caughtError?.message == "Unauthorized")
+  }
+
+  @Test func serviceErrorFromUnexpectedError() async {
+    let transport = ThrowingTransport(failure: .unexpected)
+    let client = UserErrorServiceClient(transport: transport)
+
+    let error = await #expect(throws: RPCError.self) {
+      try await client.authenticate(username: "alice", password: "wrong")
+    }
+
+    #expect(error?.code == .internalError)
+    #expect(error?.message == "Internal error")
+  }
+
   @Test(arguments: runners)
   func directServiceError(runner: IntegrationTestRunner) async throws {
     let handler = MockDirectErrorUserService()
@@ -528,6 +553,41 @@ extension IntegrationTests {
       default:
         Issue.record("Expected RPC failure")
       }
+    }
+  }
+
+  @Test func rpcFailureFromTransportError() async {
+    let error = RPCError(code: .unauthorized, message: "Unauthorized")
+    let transport = ThrowingTransport(failure: .rpc(error))
+    let client = PasswordFailureServiceClient(transport: transport)
+
+    let failure = await #expect(throws: RPCFailure<PasswordError>.self) {
+      try await client.authenticateWithFailure(username: "alice", password: "wrong")
+    }
+
+    switch failure {
+    case .rpc(let rpcError):
+      #expect(rpcError.code == .unauthorized)
+      #expect(rpcError.message == "Unauthorized")
+    default:
+      Issue.record("Expected RPC failure")
+    }
+  }
+
+  @Test func rpcFailureFromUnexpectedError() async {
+    let transport = ThrowingTransport(failure: .unexpected)
+    let client = PasswordFailureServiceClient(transport: transport)
+
+    let failure = await #expect(throws: RPCFailure<PasswordError>.self) {
+      try await client.authenticateWithFailure(username: "alice", password: "wrong")
+    }
+
+    switch failure {
+    case .rpc(let rpcError):
+      #expect(rpcError.code == .internalError)
+      #expect(rpcError.message == "Internal error")
+    default:
+      Issue.record("Expected RPC failure")
     }
   }
 
