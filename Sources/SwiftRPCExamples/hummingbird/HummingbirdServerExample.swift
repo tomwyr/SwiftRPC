@@ -3,7 +3,7 @@ import Hummingbird
 import SwiftRPC
 import SwiftRPCHummingbird
 
-struct ServerApp {
+struct HummingbirdServerExample {
   static func run() async throws {
     let router = Router()
 
@@ -15,7 +15,7 @@ struct ServerApp {
       configuration: .init(address: .hostname("0.0.0.0", port: 8080)),
     )
 
-    print("Server starting on http://0.0.0.0:8080")
+    print("Hummingbird server starting on http://0.0.0.0:8080")
     try await app.runService()
   }
 }

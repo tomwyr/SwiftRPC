@@ -6,22 +6,37 @@ struct SwiftRPCExamples {
     let arguments = CommandLine.arguments
 
     guard arguments.count > 1 else {
-      print("Usage: SwiftRPCExamples <client|server|in-memory>")
+      printUsage()
       exit(1)
     }
 
-    let mode = arguments[1]
-
-    switch mode {
-    case "client":
-      try await ClientApp.run()
-    case "server":
-      try await ServerApp.run()
-    case "in-memory":
+    switch Array(arguments.dropFirst()) {
+    case ["in-memory"]:
       try await InMemoryApp.run()
+    case ["hummingbird", "server"]:
+      try await HummingbirdServerExample.run()
+    case ["hummingbird", "client"]:
+      try await HummingbirdClientExample.run()
+    case ["vapor", "server"]:
+      try await VaporServerExample.run()
+    case ["vapor", "client"]:
+      try await VaporClientExample.run()
     default:
-      print("Usage: SwiftRPCExamples <client|server|in-memory>")
+      printUsage()
       exit(1)
     }
+  }
+
+  private static func printUsage() {
+    print(
+      """
+      Usage:
+        swift run SwiftRPCExamples in-memory
+        swift run SwiftRPCExamples hummingbird server
+        swift run SwiftRPCExamples hummingbird client
+        swift run SwiftRPCExamples vapor server
+        swift run SwiftRPCExamples vapor client
+      """
+    )
   }
 }

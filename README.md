@@ -402,29 +402,33 @@ UserServiceServer(
 
 ## Examples
 
-The package includes an executable target with server and client examples:
+The examples module demonstrates a basic service using supported integrations and the configuration needed for client-server communication.
 
-```sh
-swift run SwiftRPCExamples server
-swift run SwiftRPCExamples client
-```
-
-Source:
-
-- [Service definition](Sources/SwiftRPCExamples/AppService.swift)
-- [Service handler](Sources/SwiftRPCExamples/AppServiceHandler.swift)
-- [Server example](Sources/SwiftRPCExamples/ServerExample.swift)
-- [Client example](Sources/SwiftRPCExamples/ClientExample.swift)
-
-For same-process usage, run:
+### In-memory
 
 ```sh
 swift run SwiftRPCExamples in-memory
 ```
 
-Source:
+Source: [In-memory example](Sources/SwiftRPCExamples/in-memory/InMemoryExample.swift)
 
-- [In-memory example](Sources/SwiftRPCExamples/InMemoryApp.swift)
+### Hummingbird
+
+```sh
+swift run SwiftRPCExamples hummingbird server
+swift run SwiftRPCExamples hummingbird client
+```
+
+Source: [server](Sources/SwiftRPCExamples/hummingbird/HummingbirdServerExample.swift), [client](Sources/SwiftRPCExamples/hummingbird/HummingbirdClientExample.swift)
+
+### Vapor
+
+```sh
+swift run SwiftRPCExamples vapor server
+swift run SwiftRPCExamples vapor client
+```
+
+Source: [server](Sources/SwiftRPCExamples/vapor/VaporServerExample.swift), [client](Sources/SwiftRPCExamples/vapor/VaporClientExample.swift)
 
 ## Contributing
 

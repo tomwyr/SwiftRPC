@@ -56,7 +56,9 @@ let package = Package(
                 "SwiftRPC",
                 "SwiftRPCMacros",
                 "SwiftRPCHummingbird",
+                "SwiftRPCVapor",
                 .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "Vapor", package: "vapor"),
             ],
         ),
         .testTarget(
