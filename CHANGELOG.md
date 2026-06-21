@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+- Added Vapor integration.
+
 ## 0.7.0
 
 - Added protocol-level service error transport with `@RPC(serviceError:)`.

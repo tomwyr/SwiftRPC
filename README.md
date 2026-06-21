@@ -30,6 +30,8 @@ targets: [
       .product(name: "SwiftRPC", package: "SwiftRPC"),
       // Add one of the available server integrations.
       .product(name: "SwiftRPCHummingbird", package: "SwiftRPC"),
+      // or
+      .product(name: "SwiftRPCVapor", package: "SwiftRPC"),
     ]
   ),
 ]
@@ -326,15 +328,15 @@ do {
 > [!IMPORTANT]
 > The error type must conform to `RPCMethodError`, which adds `fromRPC(_:)` so the generated client can recover RPC-layer failures as the method's typed error.
 
-## Transports
+## Transport
 
-Use the generated `baseURL` initializer when a client calls a service over HTTP:
+The transport layer carries generated method calls between clients and service handlers.
 
-```swift
-let client = UserServiceClient(baseURL: URL(string: "http://localhost:8080")!)
-```
+### Server
 
-On the server, use `SwiftRPCHummingbird` to register the generated server with a Hummingbird router:
+Register the generated server with one of the supported integrations.
+
+[Hummingbird](https://github.com/hummingbird-project/hummingbird):
 
 ```swift
 import SwiftRPCHummingbird
@@ -342,7 +344,25 @@ import SwiftRPCHummingbird
 UserServiceServer(handler: UserServiceHandler()).register(on: router)
 ```
 
-For tests or same-process composition, use `InMemoryTransport` with the generated server and client:
+[Vapor](https://github.com/vapor/vapor):
+
+```swift
+import SwiftRPCVapor
+
+UserServiceServer(handler: UserServiceHandler()).register(on: app.routes)
+```
+
+### Client
+
+Use the generated `baseURL` initializer when a client calls a service over HTTP:
+
+```swift
+let client = UserServiceClient(baseURL: URL(string: "http://localhost:8080")!)
+```
+
+### Local Use
+
+For tests or a single-process setup, use the in-memory transport to connect the generated client and server:
 
 ```swift
 let registry = InMemoryHandlerRegistry()
@@ -378,6 +398,7 @@ UserServiceServer(
 | --------------------- | ---------------------------------------------------------------------------- |
 | `SwiftRPC`            | Service contracts, typed clients and servers, HTTP clients, and local calls. |
 | `SwiftRPCHummingbird` | Hummingbird registration support for SwiftRPC services.                      |
+| `SwiftRPCVapor`       | Vapor registration support for SwiftRPC services.                            |
 
 ## Examples
 
