@@ -323,6 +323,9 @@ do {
 }
 ```
 
+> [!IMPORTANT]
+> The error type must conform to `RPCMethodError`, which adds `fromRPC(_:)` so the generated client can recover RPC-layer failures as the method's typed error.
+
 ## Transports
 
 Use the generated `baseURL` initializer when a client calls a service over HTTP:
