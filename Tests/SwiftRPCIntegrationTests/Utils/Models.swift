@@ -34,10 +34,15 @@ struct LogoutResponse: Codable, Equatable {
   let message: String
 }
 
-enum UserError: RPCServiceError, Equatable {
+enum UserError: RPCMethodError, Equatable {
   case invalidCredentials
   case profileNotFound
   case updateFailed
+  case unknown
+
+  static func fromRPC(_ error: RPCError) -> Self {
+    .unknown
+  }
 }
 
 enum PasswordError: RPCServiceError, Equatable {
@@ -45,6 +50,28 @@ enum PasswordError: RPCServiceError, Equatable {
 }
 
 struct UnexpectedError: Error {}
+
+struct ThrowingTransport: RPCTransport {
+  enum Failure: Sendable {
+    case rpc(RPCError)
+    case unexpected
+  }
+
+  let failure: Failure
+
+  func send<Input: Codable, Output: Codable>(
+    route: String,
+    input: Input,
+    outputType: Output.Type,
+  ) async throws -> Output {
+    switch failure {
+    case .rpc(let error):
+      throw error
+    case .unexpected:
+      throw UnexpectedError()
+    }
+  }
+}
 
 struct Movie: Codable, Equatable {
   let title: String

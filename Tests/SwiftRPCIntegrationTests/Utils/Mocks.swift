@@ -204,9 +204,9 @@ class MockUserErrorService: UserErrorService, @unchecked Sendable {
     }
   }
 
-  func authenticateWithFailure(username: String, password: String) async throws(
-    RPCFailure<PasswordError>
-  ) -> AuthToken {
+  func authenticateWithFailure(username: String, password: String)
+    async throws(RPCFailure<PasswordError>) -> AuthToken
+  {
     switch typedFailureMode {
     case .none:
       return authToken
@@ -228,9 +228,9 @@ class MockPasswordFailureService: PasswordFailureService, @unchecked Sendable {
   var failureMode = MockUserErrorService.FailureMode.none
   var authToken = AuthToken(token: "password-service-token", expiresAt: 3600)
 
-  func authenticateWithFailure(username: String, password: String) async throws(
-    RPCFailure<PasswordError>
-  ) -> AuthToken {
+  func authenticateWithFailure(username: String, password: String)
+    async throws(RPCFailure<PasswordError>) -> AuthToken
+  {
     switch failureMode {
     case .none:
       return authToken
@@ -240,6 +240,25 @@ class MockPasswordFailureService: PasswordFailureService, @unchecked Sendable {
       throw .rpc(RPCError(code: .unauthorized, message: "Unauthorized"))
     case .unknownError:
       throw .rpc(RPCError(code: .internalError, message: "Internal error"))
+    }
+  }
+}
+
+class MockDirectErrorUserService: DirectErrorUserService, @unchecked Sendable {
+  enum FailureMode {
+    case none
+    case serviceError
+  }
+
+  var failureMode = FailureMode.none
+  var authToken = AuthToken(token: "direct-service-token", expiresAt: 3600)
+
+  func authenticate(username: String, password: String) async throws(UserError) -> AuthToken {
+    switch failureMode {
+    case .none:
+      return authToken
+    case .serviceError:
+      throw .invalidCredentials
     }
   }
 }

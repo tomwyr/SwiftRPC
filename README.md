@@ -295,6 +295,34 @@ do {
 }
 ```
 
+#### Method Service Errors
+
+Use `async throws(ServiceError)` when a method should throw a service-defined error type directly:
+
+```swift
+enum LoginError: RPCMethodError {
+  case invalidCredentials
+  case unexpected
+
+  static func fromRPC(_ error: RPCError) -> Self {
+    .unexpected
+  }
+}
+
+@RPC
+protocol LoginService {
+  func login(email: String, password: String) async throws(LoginError) -> User
+}
+
+do {
+  let user = try await client.login(email: email, password: password)
+} catch LoginError.invalidCredentials {
+  print("Invalid credentials")
+} catch LoginError.unexpected {
+  print("Unexpected login failure")
+}
+```
+
 ## Transports
 
 Use the generated `baseURL` initializer when a client calls a service over HTTP:

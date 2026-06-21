@@ -447,6 +447,46 @@ extension IntegrationTests {
   }
 
   @Test(arguments: runners)
+  func directServiceError(runner: IntegrationTestRunner) async throws {
+    let handler = MockDirectErrorUserService()
+    handler.failureMode = .serviceError
+    let server = DirectErrorUserServiceServer(handler: handler)
+
+    try await runner.run(server) { transport in
+      let client = DirectErrorUserServiceClient(transport: transport)
+
+      let error = await #expect(throws: UserError.self) {
+        try await client.authenticate(username: "alice", password: "wrong")
+      }
+
+      #expect(error == .invalidCredentials)
+    }
+  }
+
+  @Test func directServiceErrorFromTransportError() async {
+    let error = RPCError(code: .unauthorized, message: "Unauthorized")
+    let transport = ThrowingTransport(failure: .rpc(error))
+    let client = DirectErrorUserServiceClient(transport: transport)
+
+    let caughtError = await #expect(throws: UserError.self) {
+      try await client.authenticate(username: "alice", password: "wrong")
+    }
+
+    #expect(caughtError == .unknown)
+  }
+
+  @Test func directServiceErrorFromUnexpectedError() async {
+    let transport = ThrowingTransport(failure: .unexpected)
+    let client = DirectErrorUserServiceClient(transport: transport)
+
+    let error = await #expect(throws: UserError.self) {
+      try await client.authenticate(username: "alice", password: "wrong")
+    }
+
+    #expect(error == .unknown)
+  }
+
+  @Test(arguments: runners)
   func serviceFailure(runner: IntegrationTestRunner) async throws {
     let handler = MockPasswordFailureService()
     handler.failureMode = .serviceError

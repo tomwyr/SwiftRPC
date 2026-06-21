@@ -40,6 +40,11 @@ protocol PasswordFailureService {
     async throws(RPCFailure<PasswordError>) -> AuthToken
 }
 
+@RPC(serviceError: PasswordError.self)
+protocol DirectErrorUserService {
+  func authenticate(username: String, password: String) async throws(UserError) -> AuthToken
+}
+
 @RPC(inlineHandler: true)
 protocol MovieService {
   func search(query: String) async throws -> Movie

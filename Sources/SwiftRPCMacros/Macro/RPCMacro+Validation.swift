@@ -67,15 +67,6 @@ extension RPCMacro {
       )
     }
 
-    if let thrownType = fn.signature.effectSpecifiers?.throwsClause?.type,
-      thrownType.failureServiceErrorType == nil
-    {
-      diagnostics.appendDiagnostic(
-        node: thrownType,
-        message: .unsupportedTypedThrows(name: fn.name.text),
-      )
-    }
-
     for param in fn.signature.parameterClause.parameters {
       validateCodableType(
         param.type,

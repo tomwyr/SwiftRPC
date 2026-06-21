@@ -103,6 +103,7 @@ struct RPCMethod {
   let returnType: String
   let isVoidReturn: Bool
   let failureServiceErrorType: String?
+  let directServiceErrorType: String?
 
   init(from fn: FunctionDeclSyntax) {
     name = fn.name.text
@@ -114,6 +115,7 @@ struct RPCMethod {
     isVoidReturn = returnClause.isVoidLike()
     let throwsClause = fn.signature.effectSpecifiers?.throwsClause
     failureServiceErrorType = throwsClause?.type?.failureServiceErrorType
+    directServiceErrorType = throwsClause?.type?.directServiceErrorType
   }
 
   /// The internal input struct name, e.g. `GetUser`
@@ -164,6 +166,8 @@ struct RPCMethod {
   var throwsClause: String {
     if let failureServiceErrorType {
       "throws(RPCFailure<\(failureServiceErrorType)>)"
+    } else if let directServiceErrorType {
+      "throws(\(directServiceErrorType))"
     } else {
       "throws"
     }
@@ -173,14 +177,16 @@ struct RPCMethod {
   var closureThrowsClause: String {
     if let failureServiceErrorType {
       "throws(RPCFailure<\(failureServiceErrorType)>)"
+    } else if let directServiceErrorType {
+      "throws(\(directServiceErrorType))"
     } else {
       "throws"
     }
   }
 
-  /// The method-level service error type, if declared with typed RPC failures.
-  func serviceErrorType(default defaultServiceErrorType: String?) -> String? {
-    failureServiceErrorType ?? defaultServiceErrorType
+  /// The service error payload type expected in RPC responses.
+  func responseServiceErrorType(default defaultServiceErrorType: String?) -> String? {
+    failureServiceErrorType ?? directServiceErrorType ?? defaultServiceErrorType
   }
 }
 
@@ -258,5 +264,13 @@ extension TypeSyntax {
     }
 
     return serviceErrorType.trimmedDescription
+  }
+
+  var directServiceErrorType: String? {
+    if failureServiceErrorType != nil {
+      return nil
+    }
+
+    return trimmedDescription
   }
 }

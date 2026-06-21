@@ -15,7 +15,7 @@ extension RPCMacro {
     var methodRegistrations = [String]()
 
     for method in proto.methods {
-      let methodServiceErrorType = method.serviceErrorType(default: serviceErrorType)
+      let methodServiceErrorType = method.responseServiceErrorType(default: serviceErrorType)
       let handlerCall =
         if let variadicParam = method.variadicParam {
           makeVariadicHandlerCall(

@@ -140,6 +140,177 @@ struct RPCMacroTests {
     }
   }
 
+  @Test func methodServiceErrorExpansion() {
+    assertMacro {
+      """
+      @RPC
+      protocol AccountService {
+        func load(id: String) async throws(AccountError) -> Account
+      }
+      """
+    } expansion: {
+      """
+      protocol AccountService {
+        func load(id: String) async throws(AccountError) -> Account
+      }
+
+      private struct AccountServiceInputs {
+        struct Load: Codable {
+          let id: String
+        }
+      }
+
+      private struct AccountServiceOutputs {
+        struct Nothing: Codable {
+        }
+      }
+
+      struct AccountServiceClient: AccountService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func load(id: String) async throws(AccountError) -> Account {
+          let input = AccountServiceInputs.Load(id: id)
+          do {
+            return try await transport.send(
+              route: "/load",
+              input: input,
+              outputType: Account.self,
+              serviceErrorType: AccountError.self,
+            )
+          } catch let error as AccountError {
+            throw error
+          } catch let error as RPCError {
+            throw AccountError.fromRPC(error)
+          } catch {
+            throw AccountError.fromRPC(RPCError(code: .internalError, message: error.outMessage))
+          }
+        }
+      }
+
+      struct AccountServiceServer<Handler: AccountService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "load") { (input: AccountServiceInputs.Load) in
+            do {
+              return try await self.handler.load(id: input.id)
+            } catch let error as RPCError {
+              throw error
+            } catch let error as RPCServiceErrorEnvelope {
+              throw error
+            } catch let error as AccountError {
+              throw RPCServiceErrorEnvelope(error)
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
+  @Test func methodServiceErrorWithServiceLevelErrorExpansion() {
+    assertMacro {
+      """
+      @RPC(serviceError: AccountError.self)
+      protocol AccountService {
+        func refresh(token: inout String) async throws(RefreshError)
+      }
+      """
+    } expansion: {
+      """
+      protocol AccountService {
+        func refresh(token: inout String) async throws(RefreshError)
+      }
+
+      private struct AccountServiceInputs {
+        struct Refresh: Codable {
+          let token: String
+        }
+      }
+
+      private struct AccountServiceOutputs {
+        struct Nothing: Codable {
+        }
+        struct RefreshOutput: Codable {
+          let mutations: RefreshMutations
+        }
+        struct RefreshMutations: Codable {
+          let token: String
+        }
+      }
+
+      struct AccountServiceClient: AccountService, Sendable {
+        private let transport: any RPCTransport
+
+        init(transport: any RPCTransport) {
+          self.transport = transport
+        }
+
+        init(baseURL: URL) {
+          self.transport = HTTPTransport(baseURL: baseURL)
+        }
+
+        func refresh(token: inout String) async throws(RefreshError) {
+          let input = AccountServiceInputs.Refresh(token: token)
+          do {
+            let output = try await transport.send(
+              route: "/refresh",
+              input: input,
+              outputType: AccountServiceOutputs.RefreshOutput.self,
+              serviceErrorType: RefreshError.self,
+            )
+            token = output.mutations.token
+          } catch let error as RefreshError {
+            throw error
+          } catch let error as RPCError {
+            throw RefreshError.fromRPC(error)
+          } catch {
+            throw RefreshError.fromRPC(RPCError(code: .internalError, message: error.outMessage))
+          }
+        }
+      }
+
+      struct AccountServiceServer<Handler: AccountService & Sendable>: RPCServer {
+        private let handler: Handler
+
+        init(handler: Handler) {
+          self.handler = handler
+        }
+
+        func register(on registry: any RPCHandlerRegistry) {
+          registry.register(method: "refresh") { (input: AccountServiceInputs.Refresh) in
+            do {
+              var token = input.token
+              try await self.handler.refresh(token: &token)
+              return AccountServiceOutputs.RefreshOutput(
+                mutations: AccountServiceOutputs.RefreshMutations(token: token)
+              )
+            } catch let error as RPCError {
+              throw error
+            } catch let error as RPCServiceErrorEnvelope {
+              throw error
+            } catch let error as RefreshError {
+              throw RPCServiceErrorEnvelope(error)
+            }
+          }
+        }
+      }
+      """
+    }
+  }
+
   @Test func rpcFailureExpansion() {
     assertMacro {
       """
