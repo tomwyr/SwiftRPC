@@ -347,14 +347,13 @@ import SwiftRPCHummingbird
 UserServiceServer(handler: UserServiceHandler()).register(on: router)
 ```
 
-> [!TIP]
-> Use `RPCApplication.hummingbird` to configure the server with Hummingbird:
->
-> ```swift
-> let app = RPCApplication.hummingbird(hostname: "0.0.0.0", port: 8080) {
->   UserServiceServer(handler: UserServiceHandler())
-> }
-> ```
+Use `RPCApplication.hummingbird` to configure the server with Hummingbird:
+
+```swift
+let app = RPCApplication.hummingbird(hostname: "0.0.0.0", port: 8080) {
+  UserServiceServer(handler: UserServiceHandler())
+}
+```
 
 [Vapor](https://github.com/vapor/vapor):
 
@@ -364,14 +363,13 @@ import SwiftRPCVapor
 UserServiceServer(handler: UserServiceHandler()).register(on: app.routes)
 ```
 
-> [!TIP]
-> Use `RPCApplication.vapor` to configure the server with Vapor:
->
-> ```swift
-> let app = RPCApplication.vapor(hostname: "0.0.0.0", port: 8080) {
->   UserServiceServer(handler: UserServiceHandler())
-> }
-> ```
+Use `RPCApplication.vapor` to configure the server with Vapor:
+
+```swift
+let app = RPCApplication.vapor(hostname: "0.0.0.0", port: 8080) {
+  UserServiceServer(handler: UserServiceHandler())
+}
+```
 
 ### Client
 
@@ -392,14 +390,13 @@ let transport = InMemoryTransport(from: registry)
 let client = UserServiceClient(transport: transport)
 ```
 
-> [!TIP]
-> Use `RPCApplication.inMemory` to configure the server with the in-memory transport:
->
-> ```swift
-> let app = RPCApplication.inMemory {
->   UserServiceServer(handler: UserServiceHandler())
-> }
-> ```
+Use `RPCApplication.inMemory` to configure the server with the in-memory transport:
+
+```swift
+let app = RPCApplication.inMemory {
+  UserServiceServer(handler: UserServiceHandler())
+}
+```
 
 ## Inline Handlers
 
