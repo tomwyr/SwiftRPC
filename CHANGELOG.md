@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0 - Unreleased
+
+- Added convenience methods for starting servers.
+
 ## 0.8.0
 
 - Added Vapor integration.
