@@ -175,3 +175,9 @@ public protocol RPCServer: Sendable {
   /// Registers this server's methods on a handler registry.
   func register(on registry: any RPCHandlerRegistry)
 }
+
+/// Core protocol for generated RPC clients.
+public protocol RPCClient: Sendable {
+  /// Creates this client with a transport.
+  init(transport: any RPCTransport)
+}

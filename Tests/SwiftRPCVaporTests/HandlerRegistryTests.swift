@@ -6,17 +6,6 @@ import VaporTesting
 @testable import SwiftRPC
 @testable import SwiftRPCVapor
 
-@RPC
-protocol VaporEchoService {
-  func echo(message: String) async throws -> String
-}
-
-struct VaporEchoHandler: VaporEchoService {
-  func echo(message: String) async throws -> String {
-    "Echo: \(message)"
-  }
-}
-
 @Suite struct VaporHandlerRegistryTests {
   @Test func simpleTypes() async throws {
     try await withApp { app in
@@ -320,7 +309,8 @@ struct VaporEchoHandler: VaporEchoService {
 
   @Test func generatedServerRegistration() async throws {
     try await withApp { app in
-      VaporEchoServiceServer(handler: VaporEchoHandler()).register(on: app.routes)
+      let handler = MockEchoService(result: "Echo: test")
+      EchoServiceServer(handler: handler).register(on: app.routes)
 
       let body = ByteBuffer(string: #"{"input":{"message":"test"}}"#)
 

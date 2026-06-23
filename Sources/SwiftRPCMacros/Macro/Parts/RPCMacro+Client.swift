@@ -53,7 +53,7 @@ extension RPCMacro {
       """
 
     let source = """
-      \(access)struct \(clientName): \(protoName), Sendable {
+      \(access)struct \(clientName): \(protoName), RPCClient {
       \(storedProperties.indented())
 
       \(transportInit.indented())
